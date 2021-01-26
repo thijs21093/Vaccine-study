@@ -15,7 +15,7 @@ output:
       smooth_scroll: yes
       toc_depth: 3
 ---
-x
+
 
 Last update: `r Sys.time()`
 
