@@ -92,12 +92,11 @@ Number of participants in the final dataset that failed the manipulation check:
 ```{r}
 df.def %>% nrow() - df.def %>% filter(manipulation.check=="1") %>% nrow()
 ```
+
 Which is:
 ```{r}
 percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(), accuracy = 0.01)
 ```
-
-
 
 <br>
 
@@ -448,7 +447,7 @@ age.sample <- df.def %>% transmute(agecat = cut(age, agecut, c("younger than 25"
 age.sample <- age.sample %>% 
   mutate(percentage = n / sum(n))
          
-age.population.5 <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
+age.population.5 <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
 age.total <- merge(age.population.5, age.sample, by.x = "ï..age", by.y = ".")
 
 age.total <- age.total %>% 
@@ -498,7 +497,7 @@ df.def %>%
 
 Compare with true population:
 
- ![Source: CBS.](C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/Embed/education.jpeg)
+ ![Source: CBS.](C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/education.jpeg)
 
 <br>
 
@@ -528,7 +527,7 @@ df.def %>%
 
 Compare with true population:
 ```{r}
-provinces <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/PROVINCES_NL-22012021.csv")
+provinces <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/PROVINCES_NL-22012021.csv")
 
 provinces %>% 
   rename(province = ï..province)  %>% 
