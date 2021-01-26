@@ -51,9 +51,7 @@ library(data.table)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/.RData")
-
-source("C:/Users/Thijs/surfdrive/COVID vaccine/R data/Vaccine study/DATA_MANIPULATION_NL-21012021.R")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/Vaccine study/.RData")
 
 set_theme(
   base=theme_blank(),
@@ -540,7 +538,7 @@ df.def %>%
 
 Compare with true population:
 
- ![Source: CBS.](Embed/education.jpeg)
+ ![Source: CBS.](C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/Embed/education.jpeg)
 
 <br>
 
