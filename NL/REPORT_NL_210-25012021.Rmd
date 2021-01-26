@@ -1,5 +1,5 @@
 ---
-title: "Report COVID study NL  210"
+title: "Report COVID study NL  211"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -51,7 +51,7 @@ library(data.table)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/Vaccine study/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/.RData")
 
 set_theme(
   base=theme_blank(),
@@ -85,13 +85,19 @@ percent((df.def %>% nrow() / df.total %>% nrow()))
 
 Number of participants in this analysis:
 ```{r}
-df.def%>% nrow()
+df.def %>% nrow()
 ```
 
-Number of participants that failed the manipulation check:
+Number of participants in the final dataset that failed the manipulation check:
 ```{r}
-df.total %>% nrow() - df.total %>% filter(manipulation.check=="1") %>% nrow()
+df.def %>% nrow() - df.def %>% filter(manipulation.check=="1") %>% nrow()
 ```
+Which is:
+```{r}
+percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(), accuracy = 0.01)
+```
+
+
 
 <br>
 
@@ -160,33 +166,7 @@ table.duration <- df.def %>%
             q3 = quantile(duration, probs = 0.75),
             max = max(duration)) %>% round(digits = 2)
 
-table.duration.grouped <- df.def %>% group_by(manipulation.check) %>%
-  summarize(mean = mean(duration),
-            sd = sd(duration),
-            min = min(duration),
-            q1 = quantile(duration, probs = 0.25),
-            median = median(duration),
-            q3 = quantile(duration, probs = 0.75),
-            max = max(duration)) %>% round(digits = 2)
-
-table.intro.grouped <- df.def %>% group_by(manipulation.check) %>%  summarize(mean = mean(intro.submit),
-            sd = sd(intro.submit),
-            min = min(intro.submit),
-            q1 = quantile(intro.submit, probs = 0.25),
-            median = median(intro.submit),
-            q3 = quantile(intro.submit, probs = 0.75),
-            max = max(intro.submit)) %>% round(digits = 2)
-
 table.intro.submit <- df.def %>% 
-  summarize(mean = mean(intro.submit),
-            sd = sd(intro.submit),
-            min = min(intro.submit),
-            q1 = quantile(intro.submit, probs = 0.25),
-            median = median(intro.submit),
-            q3 = quantile(intro.submit, probs = 0.75),
-            max = max(intro.submit)) %>% round(digits = 2)
-
-table.intro.submit.grouped <- df.def %>% group_by(manipulation.check) %>% 
   summarize(mean = mean(intro.submit),
             sd = sd(intro.submit),
             min = min(intro.submit),
@@ -204,25 +184,7 @@ table.manipulation.submit <- df.def %>%
             q3 = quantile(manipulation.submit, probs = 0.75),
             max = max(manipulation.submit)) %>% round(digits = 2)
 
-table.manipulation.submit.grouped <- df.def %>%  group_by(manipulation.check) %>%
-  summarize(mean = mean(manipulation.submit),
-            sd = sd(manipulation.submit),
-            min = min(manipulation.submit),
-            q1 = quantile(manipulation.submit, probs = 0.25),
-            median = median(manipulation.submit),
-            q3 = quantile(manipulation.submit, probs = 0.75),
-            max = max(manipulation.submit)) %>% round(digits = 2)
-
 table.decision.submit <- df.def %>% 
-  summarize(mean = mean(decision.submit),
-            sd = sd(decision.submit),
-            min = min(decision.submit),
-            q1 = quantile(decision.submit, probs = 0.25),
-            median = median(decision.submit),
-            q3 = quantile(decision.submit, probs = 0.75),
-            max = max(decision.submit)) %>% round(digits = 2)
-
-table.decision.submit.grouped <- df.def %>% group_by(manipulation.check) %>%
   summarize(mean = mean(decision.submit),
             sd = sd(decision.submit),
             min = min(decision.submit),
@@ -245,7 +207,7 @@ plot_frq((duration),
         geom.colors = alpha("red",0.8),
         type = "hist",
         geom.size = 0.25) +
-  theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) + ylim(0, 30)+ annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
+  theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) + scale_y_continuous(expand = expansion(c(0, 0.25))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
 ```
 
 <br>
@@ -269,7 +231,7 @@ plot_frq((intro.submit),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
-  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + ylim(0, 75) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.intro.submit))
+  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.intro.submit))
 ```
 
 <br>
@@ -286,7 +248,7 @@ plot_frq((manipulation.submit),
         type = "hist",
         geom.size = 1) +
   theme(axis.text = element_text(face = "bold",  size= 9)) +
-  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + ylim(0, 75) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.manipulation.submit))
+  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.manipulation.submit))
 ```
 
 <br>
@@ -324,7 +286,7 @@ plot_frq((decision.submit),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
-  scale_x_continuous(name= "Time in seconds", breaks = seq(0,100,5)) + ylim(0, 75) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.decision.submit))
+  scale_x_continuous(name= "Time in seconds", breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.decision.submit))
 ```
 
 <br>
@@ -468,8 +430,6 @@ tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = 
 
 Sample:
 ```{r}
-age.population.1 <- read.csv("AGE_POPULATION_NL-22012021.csv")
-
 df.def %>%
 plot_frq(age,
         type = "density",
@@ -488,7 +448,7 @@ age.sample <- df.def %>% transmute(agecat = cut(age, agecut, c("younger than 25"
 age.sample <- age.sample %>% 
   mutate(percentage = n / sum(n))
          
-age.population.5 <- read.csv("AGE_POPULATION_SEGMENTS_NL-22012021.csv")
+age.population.5 <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
 age.total <- merge(age.population.5, age.sample, by.x = "ï..age", by.y = ".")
 
 age.total <- age.total %>% 
@@ -505,7 +465,7 @@ age.total$age.category <- factor(age.total$age.category, levels = c(
 "55-59",           "60-64",           "65-69",          
 "70-74",           "75-79",           "80 or older"))    
 
-age.total %>% select(age.category, percentage.population, percentage.sample) %>% melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+age.total %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
   theme_blank() + theme(legend.position="top", axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent)
 ```
 
@@ -568,14 +528,15 @@ df.def %>%
 
 Compare with true population:
 ```{r}
-provinces <- read.csv("PROVINCES_NL-22012021.csv")
+provinces <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/PROVINCES_NL-22012021.csv")
+
 provinces %>% 
   rename(province = ï..province)  %>% 
   arrange(province) %>%
 ggplot(aes(x = province, y = percentage)) + geom_bar(stat="identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + labs(title = "Province: true population") + scale_y_continuous(labels=scales::percent)
 ```
- source: CBS.
+ Source: CBS.
 
 **Works in healthcare sector**
 ```{r}
