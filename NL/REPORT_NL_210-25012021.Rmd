@@ -332,6 +332,14 @@ p8 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, 
 ggarrange(p5, p6, p7, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
 
+
+```{r}
+tadaa_t.test(data = df.def, response = duration, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def, response = intro.submit, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def, response = manipulation.submit, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def, response = decision.submit, group = experimental.group, print = "markdown")
+```
+
 <br>
 
 ***...interface (pc/mobile)***
