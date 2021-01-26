@@ -53,6 +53,8 @@ library(data.table)
 ```{r}
 load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL/.RData")
 
+source("C:/Users/Thijs/surfdrive/COVID vaccine/R data/Vaccine study/DATA_MANIPULATION_NL-21012021.R")
+
 set_theme(
   base=theme_blank(),
   geom.outline.size = 0.01,

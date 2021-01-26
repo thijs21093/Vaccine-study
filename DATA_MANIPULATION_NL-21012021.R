@@ -1,20 +1,19 @@
 library(tidyverse)
 library(car)
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/NL")
-test <- read.csv("DATA_NL_V210-25012021.csv")
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/Vaccine study")
+test <- read.csv("DATA_NL_V211-26012021.csv")
 test[is.na(test)] <- 0
-df.prep <- test %>% filter(DistributionChannel != "preview")
+df.prep <- test %>% filter(Progress > 80)
 
 # Subset pc and mobile
 df.prep.mobile <- df.prep %>% filter(Q2.2_1>0)
 df.prep.pc<- df.prep %>% filter(Q3.2_1>0)
-df.prep.unknown <- df.prep %>% filter(Q3.2_1==0 & Q2.2_1==0)
+
 
 # Add tag
 df.prep.pc["device"] <- "pc"
 df.prep.mobile["device"] <- "mobile"
-df.prep.unknown["device"] <- "unknown"
 
 # Recode mobile
 df.prep.mobile <- df.prep.mobile %>% 
@@ -37,7 +36,7 @@ df.prep.mobile <- df.prep.mobile %>%
          Q6.4 = Q5.10) # Pre-manipulation (Mobile)
 
 # Bind rows
-df.total <- rbind(df.prep.mobile, df.prep.unknown, df.prep.pc)
+df.total <- rbind(df.prep.mobile, df.prep.pc)
 
 # Manipulation variable
 df.total <- df.total %>% mutate(experimental.group = case_when(
@@ -81,7 +80,7 @@ df.total <- df.total %>%
 # Demographics
 df.total <- df.total %>% 
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
-         age = Q19.2_8 %>% na_if(0),
+         age = Q19.2_8,
          healthcare = Q19.5 %>% recode("1='yes';  2='no'"),
          education = Q19.4 %>% Recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
@@ -218,3 +217,4 @@ df.pc <-  df.def %>%
 
 # Save data     
 save.image()
+
