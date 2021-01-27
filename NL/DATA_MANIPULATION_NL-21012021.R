@@ -79,7 +79,8 @@ df.total <- df.total %>%
 
 # Demographics
 df.total <- df.total %>% 
-  mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
+  mutate(female = Q19.3 %>% Recode("1=0; 2=1; 3=NA; 0=NA"),
+         gender = Q19.3 %>% Recode("1='male';2='female';3=NA; 0=NA"),
          age = Q19.2_8,
          healthcare = Q19.5 %>% recode("1='yes';  2='no'"),
          education = Q19.4 %>% Recode("1='1. VMBO/Mavo';
@@ -131,7 +132,8 @@ df.total <- df.total %>%
 df.total <- df.total %>% 
   mutate(benefits.vaccines = Q6.2_2%>% na_if(0),
          comments.general = Q20.6 %>% na_if(0),
-         intent.vaccine = Q16.2%>% na_if(0),
+         intent.vaccine = Q16.2 %>% na_if(0),
+         intent.vaccine.recoded = Q16.2 %>% recode("1=0; 2=0; 3=1; 4=1"),
          credibility.item1 = Q15.2 %>% na_if(0),
          credibility.item2.reversed = Q15.3 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item3.reversed = Q15.4 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
@@ -164,6 +166,7 @@ df.total <- df.total %>%
          importance.EMA = Q16.7_1 %>% na_if(0),
          importance.FDA = Q16.7_2 %>% na_if(0),
          importance.NRA = Q16.7_3 %>% na_if(0),
+         private.providers = Q20.2 %>% na_if(0),
          decision.first.click = Q14.2_First.Click %>% na_if(0),
          decision.last.click = Q14.2_Last.Click %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
@@ -202,6 +205,14 @@ df.def$manipulation.submit.quartile <- factor(df.def$manipulation.submit.quartil
 df.def$duration.quartile <- factor(df.def$duration.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
 df.def$manipulation.submit.30 <- factor(df.def$manipulation.submit.30, levels = c("Under 30 secs", "30 secs or more"))
 
+agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
+agecut.10 <- c(-Inf, 30, 40, 50, 60,  70, 80, Inf)
+
+df.def <- df.def %>% mutate(age.recoded = cut(age, agecut.10, c("younger than 30", "30-39", "40-49", "50-59", "60-69", "70-79", "80 or older"), right=FALSE))
+age.sample <- df.def %>% transmute(agecat = cut(age, agecut.5, c("younger than 25", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80 or older"), right=FALSE))  %>% table() %>% as_tibble()
+
+age.sample <- age.sample %>% 
+  mutate(percentage = n / sum(n))
 
 df.control <-  df.def %>% 
   filter(treatment == 0)
@@ -214,6 +225,12 @@ df.mobile <-  df.def %>%
 
 df.pc <-  df.def %>% 
   filter(device=="pc")
+
+df.30 <-  df.def %>% 
+  filter(manipulation.submit.30 == "30 secs or more")
+
+df.check <-  df.def %>%  
+  filter(manipulation.check=="1")
 
 # Save data     
 save.image()
