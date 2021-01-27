@@ -6,6 +6,11 @@ test <- read.csv("DATA_SE_V103-27012021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
+# Encoding text
+df.prep <- dplyr::mutate_if(df.prep, is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})
+
+
+
 # Subset pc and mobile
 df.prep.mobile <- df.prep %>% filter(Q2.2_1>0)
 df.prep.pc<- df.prep %>% filter(Q3.2_1>0)
@@ -169,6 +174,7 @@ df.total <- df.total %>%
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
          decision.click.count = Q14.2_Click.Count %>% na_if(0),
          duration = Duration..in.seconds./60 %>% na_if(0))
+
 
 # Knowledge
 df.total <- df.total %>% mutate(knowledge = case_when(
