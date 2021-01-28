@@ -1,8 +1,8 @@
 library(tidyverse)
 library(car)
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL")
-test <- read.csv("DATA_NL-27012021.csv")
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/NL - control check")
+test <- read.csv("DATA_CONTROL_CHECK_NL-27012021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
@@ -40,42 +40,29 @@ df.total <- rbind(df.prep.mobile, df.prep.pc)
 
 # Manipulation variable
 df.total <- df.total %>% mutate(experimental.group = case_when(
-  Q8.7 > 0  ~ "treatment",
-  Q10.7 > 0 ~ "control")) %>% 
-  mutate(treatment = case_when(
-  experimental.group == "treatment" ~ 1,
-  experimental.group == "control" ~ 0)) %>%
+  Q421 > 0  ~ "no text",
+  Q10.7 > 0 ~ "advice")) %>% 
+  mutate(advice = case_when(
+  experimental.group == "advice" ~ 1,
+  experimental.group == "no text" ~ 0)) %>%
   drop_na(experimental.group)
 
 # Bind answers from manipulation 
 df.total <- df.total %>%  mutate(
-  intro.first.click = Q8.3_First.Click + Q10.3_First.Click,
-  intro.last.click = Q8.3_Last.Click + Q10.3_Last.Click,
-  intro.submit = Q8.3_Page.Submit + Q10.3_Page.Submit,
-  intro.click.count = Q8.3_Click.Count + Q10.3_Click.Count,
-  manipulation.first.click = Q8.5_First.Click +  Q10.5_First.Click,
-  manipulation.last.click = Q8.5_Last.Click + Q10.5_Last.Click,
-  manipulation.submit = Q8.5_Page.Submit + Q10.5_Page.Submit,
-  manipulation.count = Q8.5_Click.Count + Q10.5_Click.Count,
-  perceived.independence = Q8.7 + Q10.7,
-  safety = Q8.6 + Q10.6)
+  intro.first.click = Q417_First.Click + Q10.3_First.Click,
+  intro.last.click = Q417_Last.Click + Q10.3_Last.Click,
+  intro.submit = Q417_Page.Submit + Q10.3_Page.Submit,
+  intro.click.count = Q417_Click.Count + Q10.3_Click.Count,
+  manipulation.first.click =   Q10.5_First.Click,
+  manipulation.last.click =  Q10.5_Last.Click,
+  manipulation.submit =  Q10.5_Page.Submit,
+  manipulation.count = Q10.5_Click.Count,
+  perceived.independence = Q421 + Q10.7,
+  safety = Q420 + Q10.6)
 
 ## IMCs
 df.total <- df.total %>% 
   mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Negen|negen"))==T,1,0))
-
-df.total <- df.total %>% 
-  mutate(manipulation.check = case_when(
-   Q298 == 1 & experimental.group == "treatment" ~ 1,
-   Q298 == 2 & experimental.group == "control" ~ 1,
-   Q298 == 3 ~ - 0,
-   Q298 == 1 & experimental.group == "control" ~ 0,
-   Q298 == 2 & experimental.group == "treatment" ~ 0))
-
-df.total <- df.total %>% 
-  mutate(manipulation.check.failed = case_when(
-    manipulation.check == 1 ~ "passed",
-    manipulation.check == 0 ~ "failed"))
 
 # Demographics
 df.total <- df.total %>% 
@@ -182,28 +169,13 @@ df.total <- df.total %>% mutate(knowledge = case_when(
 df.def <-  df.total %>%  
   filter(age >= 18 & IMC=="1")
 
-df.check <-  df.total %>%  
-  filter(age >= 18 & IMC=="1" & manipulation.check=="1")
-
 df.def <- df.def %>% mutate(duration.quartile = case_when(
   duration <= quantile(duration, probs = 0.25) ~ "Q1",
   duration > quantile(duration, probs = 0.25) & duration <= quantile(duration, probs = 0.5)  ~ "Q2",
   duration > quantile(duration, probs = 0.5) & duration <= quantile(duration, probs = 0.75)  ~ "Q3",
   duration > quantile(duration, probs = 0.75) ~ "Q4"))
 
-df.def <- df.def %>% mutate(manipulation.submit.quartile = case_when(
-  manipulation.submit <= quantile(manipulation.submit, probs = 0.25) ~ "Q1",
-  manipulation.submit > quantile(manipulation.submit, probs = 0.25) & manipulation.submit <= quantile(manipulation.submit, probs = 0.5)  ~ "Q2",
-  manipulation.submit > quantile(manipulation.submit, probs = 0.5) & manipulation.submit <= quantile(manipulation.submit, probs = 0.75)  ~ "Q3",
-  manipulation.submit > quantile(manipulation.submit, probs = 0.75) ~ "Q4"))
-
-df.def <- df.def %>% mutate(manipulation.submit.30 = case_when(
-  manipulation.submit <= 30 ~ "Under 30 secs",
-  manipulation.submit > 30 ~ "30 secs or more"))
-
-df.def$manipulation.submit.quartile <- factor(df.def$manipulation.submit.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
 df.def$duration.quartile <- factor(df.def$duration.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
-df.def$manipulation.submit.30 <- factor(df.def$manipulation.submit.30, levels = c("Under 30 secs", "30 secs or more"))
 
 agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
 agecut.10 <- c(-Inf, 30, 40, 50, 60,  70, 80, Inf)
@@ -214,23 +186,17 @@ age.sample <- df.def %>% transmute(agecat = cut(age, agecut.5, c("younger than 2
 age.sample <- age.sample %>% 
   mutate(percentage = n / sum(n))
 
-df.control <-  df.def %>% 
-  filter(treatment == 0)
+df.advice <-  df.def %>% 
+  filter(advice == 1)
 
-df.treatment <-  df.def %>% 
-  filter(treatment == 1)
+df.no.text <-  df.def %>% 
+  filter(advice == 0)
 
 df.mobile <-  df.def %>% 
   filter(device=="mobile")
 
 df.pc <-  df.def %>% 
   filter(device=="pc")
-
-df.30 <-  df.def %>% 
-  filter(manipulation.submit.30 == "30 secs or more")
-
-df.check <-  df.def %>%  
-  filter(manipulation.check=="1")
 
 # Save data     
 save.image()

@@ -76,7 +76,7 @@ df.total %>% nrow() - df.total %>% filter(IMC=="1") %>% nrow()
 
 Participants between 0-17:
 ```{r}
-df.total %>% filter(age < 18) %>% nrow()
+df.total %>% filter(IMC=="1" & age < 18) %>% nrow()
 ```
 
 Percentage of participants who are at least 18 years old and did not fail the IMC:

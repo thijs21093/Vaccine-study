@@ -1,0 +1,288 @@
+---
+title: "REPORT CONTROL CHECK NL V100"
+author: "Thijs de Boer"
+date: "2021"
+output:
+  html_document:
+    code_folding: hide
+    fig_captions: yes
+    highlight: haddock
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+      toc_depth: 3
+---
+
+
+Last update: `r Sys.time()`
+
+```{r set-global-options, echo = FALSE}
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      message=FALSE,
+                      warning = FALSE,
+                      cache = FALSE,
+                      include = TRUE,
+                      collapse = FALSE,
+                      dependson = NULL,
+                      engine = "R", #  Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Figures/",  #  Set the figure options
+                      fig.align = "left",
+                      fig.width = 6,
+                      fig.height = 4)
+```
+
+```{r silent-packages, echo = FALSE, eval = TRUE, message=FALSE, include = FALSE}
+library(sjPlot)
+library(sjstats)
+library(tidyverse)
+library(car)
+library(ggthemes)
+library(kableExtra)
+library(ggpubr)
+library(scales)
+library(ggpmisc)
+library(tadaatoolbox)
+library(data.table)
+```
+
+```{r}
+load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/NL - control check/.RData")
+
+set_theme(
+  base=theme_blank(),
+  geom.outline.size = 0.01,
+  geom.outline.color = "white", 
+  geom.label.size = 3,
+  geom.label.color = "grey50")
+```
+
+# Population
+
+Total number of participants:
+```{r}
+df.total %>% nrow()
+```
+
+Number of participants that failed the attention test:
+```{r}
+df.total %>% nrow() - df.total %>% filter(IMC=="1") %>% nrow()
+```
+
+Participants between 0-17:
+```{r}
+df.total %>% filter(IMC=="1" & age < 18) %>% nrow()
+```
+
+Percentage of participants who are at least 18 years old and did not fail the IMC:
+```{r}
+percent((df.def %>% nrow() / df.total %>% nrow()))
+```
+
+Number of participants in this analysis:
+```{r}
+df.def %>% nrow()
+```
+
+<br>
+
+# Experiment: Perceived independence of EMA
+
+<br>
+
+## Randomisation check
+This table shows how many respondents are assigned to each experimental group.
+```{r}
+df.def %>%
+  group_by(experimental.group) %>%
+  tally()
+```
+
+<br>
+
+## Description
+```{r}
+df.def %>% 
+sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
+  kbl(digits= 2) %>%
+ kable_paper()
+```
+
+<br>
+
+## Histogram
+```{r}
+df.def %>%
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
+  theme_tufte()
+```
+
+## T-test
+
+```{r}
+tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+```
+
+# Time
+
+<br>
+
+```{r include=FALSE}
+table.duration <- df.def %>%
+  dplyr::summarize(mean = mean(duration),
+            sd = sd(duration),
+            min = min(duration),
+            q1 = quantile(duration, probs = 0.25),
+            median = median(duration),
+            q3 = quantile(duration, probs = 0.75),
+            max = max(duration)) %>% round(digits = 2)
+
+table.intro.submit <- df.def %>% 
+   dplyr::summarize(mean = mean(intro.submit),
+            sd = sd(intro.submit),
+            min = min(intro.submit),
+            q1 = quantile(intro.submit, probs = 0.25),
+            median = median(intro.submit),
+            q3 = quantile(intro.submit, probs = 0.75),
+            max = max(intro.submit)) %>% round(digits = 2)
+
+table.manipulation.submit <- df.def %>%  
+   dplyr::summarize(mean = mean(manipulation.submit),
+            sd = sd(manipulation.submit),
+            min = min(manipulation.submit),
+            q1 = quantile(manipulation.submit, probs = 0.25),
+            median = median(manipulation.submit),
+            q3 = quantile(manipulation.submit, probs = 0.75),
+            max = max(manipulation.submit)) %>% round(digits = 2)
+
+table.decision.submit <- df.def %>% 
+   dplyr::summarize(mean = mean(decision.submit),
+            sd = sd(decision.submit),
+            min = min(decision.submit),
+            q1 = quantile(decision.submit, probs = 0.25),
+            median = median(decision.submit),
+            q3 = quantile(decision.submit, probs = 0.75),
+            max = max(decision.submit)) %>% round(digits = 2)
+```
+
+<br>
+
+## Survey duration
+
+<br>
+
+### Histogram
+```{r}
+df.def %>% filter(duration < 30) %>% 
+plot_frq((duration),
+        geom.colors = alpha("red",0.8),
+        type = "hist",
+        geom.size = 0.25) +
+  theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) + scale_y_continuous(expand = expansion(c(0, 0.25))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
+```
+
+<br>
+
+
+## Do participants read the information about the case?
+
+<br>
+
+### Page submission - introduction of case
+```{r}
+df.def %>% filter(intro.submit < 100) %>%  
+plot_frq((intro.submit),
+        geom.colors = alpha("dodgerblue2",0.8),
+        type = "hist",
+        geom.size = 1) + 
+  theme(axis.text = element_text(face = "bold",  size= 9)) +
+  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.intro.submit))
+```
+
+<br>
+
+### Page submission - EMA's decision
+```{r}
+df.def %>% filter(decision.submit < 100) %>% 
+plot_frq((decision.submit),
+        geom.colors = alpha("dodgerblue2",0.8),
+        type = "hist",
+        geom.size = 1) + 
+  theme(axis.text = element_text(face = "bold",  size= 9)) +
+  scale_x_continuous(name= "Time in seconds", breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.decision.submit))
+```
+
+<br>
+
+## Time and ...
+
+<br>
+
+### ...experimental groups
+```{r}
+p5 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+p6  <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+p8 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
+ geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+ggarrange(p5, p6, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+```
+
+<br>
+
+T-tests (outliers removed - i.e., cases outside 1.5 times the interquartile range):
+```{r include=FALSE}
+out.duration <- boxplot(df.def$duration, plot=FALSE)$out
+out.duration <-df.def[-which(df.def$duration %in% out.duration),]
+
+out.intro.submit <- boxplot(df.def$intro.submit, plot=FALSE)$out
+out.intro.submit <-df.def[-which(df.def$intro.submit %in% out.intro.submit),]
+
+out.decision.submit <- boxplot(df.def$decision.submit, plot=FALSE)$out
+out.decision.submit <-df.def[-which(df.def$decision.submit %in% out.decision.submit),]
+```
+
+***Survey duration***
+```{r}
+tadaa_t.test(data = out.duration, response = duration, group = experimental.group, print = "markdown")
+```
+
+***Page submission - Introduction***
+```{r}
+tadaa_t.test(data = out.intro.submit, response = intro.submit, group = experimental.group, print = "markdown")
+```
+
+***Page submission - decision***
+```{r}
+tadaa_t.test(data = out.decision.submit, response = decision.submit, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+### ...interface (pc/mobile)
+
+```{r}
+p9 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+p10 <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+
+p12 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = device, fill = device)) +
+ geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+
+ggarrange(p9, p10, p12, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+```
