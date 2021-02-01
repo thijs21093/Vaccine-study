@@ -2,7 +2,7 @@ library(tidyverse)
 library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/SE")
-test <- read.csv("DATA_SE_V103-27012021.csv")
+test <- read.csv("DATA_SE-29012021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
@@ -128,7 +128,6 @@ df.total <- df.total %>%
                                     8='500K> SEK';
                                     0=NA"),
          native.language = Q19.9%>% na_if(0))
-
 
 # Outcome variables
 df.total <- df.total %>% 

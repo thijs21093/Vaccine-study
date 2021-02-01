@@ -469,12 +469,6 @@ tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = 
 **Age**
 
 ```{r}
-agecut <- c(-Inf, 25, 30, 35, 40, 46, 50, 55, 60, 65, 70, 75, 80, Inf)
-age.sample <- df.def %>% transmute(agecat = cut(age, agecut, c("younger than 25", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80 or older"), right=FALSE))  %>% table() %>% as_data_frame()
-
-age.sample <- age.sample %>% 
-  mutate(percentage = n / sum(n))
-         
 age.population.5 <- read.csv("AGE_POPULATION_SEGMENTS_SE-22012021.csv")
 age.total <- merge(age.population.5, age.sample, by.x = "age", by.y = ".")
 
@@ -514,7 +508,7 @@ plot_frq(female,
 ```{r}
 education.population <- read.csv("EDUCATION_SE-25012021.csv")
 
-education.sample <-  df.total %>% drop_na(education.recoded)  %>%  count(education.recoded) %>% 
+education.sample <-  df.def %>% drop_na(education.recoded)  %>%  count(education.recoded) %>% 
   mutate(percentage = n / sum(n))
 
 education.total <- merge(education.population, education.sample, by.x = "level", by.y = "education.recoded", all = TRUE)
@@ -547,7 +541,7 @@ df.def %>%
 **Province**
 ```{r}
 provinces.population <- read.csv("PROVINCES_SE-22012021.csv")
-provinces.sample <-  df.total %>% drop_na(province)  %>%  count(province) %>% 
+provinces.sample <-  df.def %>% drop_na(province)  %>%  count(province) %>% 
   mutate(percentage = n / sum(n))
 
 provinces.total <- merge(provinces.sample, provinces.population, by = "province")

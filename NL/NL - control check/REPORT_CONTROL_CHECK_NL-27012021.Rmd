@@ -1,5 +1,5 @@
 ---
-title: "REPORT CONTROL CHECK NL V101"
+title: "REPORT CONTROL CHECK NL V102"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -65,22 +65,22 @@ set_theme(
 
 Total number of participants:
 ```{r}
-df.total %>% nrow()
+df.total %>% filter(error == 0) %>% nrow()
 ```
 
 Number of participants that failed the attention test:
 ```{r}
-df.total %>% nrow() - df.total %>% filter(IMC=="1") %>% nrow()
+df.total %>% filter(error == 0) %>% nrow() - df.total %>% filter(IMC=="1" & error == 0) %>% nrow()
 ```
 
 Participants between 0-17:
 ```{r}
-df.total %>% filter(IMC=="1" & age < 18) %>% nrow()
+df.total %>% filter(IMC=="1" & age < 18 & error == 0) %>% nrow()
 ```
 
 Percentage of participants who are at least 18 years old and did not fail the IMC:
 ```{r}
-percent((df.def %>% nrow() / df.total %>% nrow()))
+percent(df.def %>% nrow() / df.total %>% filter(error == 0) %>% nrow())
 ```
 
 Number of participants in this analysis:
@@ -105,11 +105,11 @@ df.def %>% group_by(Q298, experimental.group) %>% tally()
 
 Q298 is the manipulation check:
 <br>
-  + 1 = independence
+  - 1 = independence
 <br>
-  + 2 = advice (correct answer for "advice" condition)
+  - 2 = advice (correct answer for "advice" condition)
 <br>
-  + 3 = None of these (correct answer for "no text" condition)
+  - 3 = None of these (correct answer for "no text" condition)
 
 <br>
 
@@ -138,6 +138,8 @@ sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "
 <br>
 
 ## Histogram
+
+### Without those who received erroneous manipulation check
 ```{r}
 df.def %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
@@ -148,19 +150,34 @@ df.def %>%
 
 ## T-test
 
-### With complete dataset
+### Without those who received erroneous manipulation check
 ```{r}
 tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
- 
 
-### With those who failed the manipulation check filtered out 
+### Without those who failed the manipulation check
 ```{r}
 tadaa_t.test(data = df.check, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 
+### With complete dataset
+```{r}
+df.def.error %>%
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte()
+```
+
+## T-test: With complete dataset
+```{r}
+tadaa_t.test(data = df.def.error, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+```
+ 
+
 # Credbility
+
 
 ## Description
 ```{r}
@@ -172,7 +189,7 @@ sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iq
 
 <br>
 
-## Histogram
+## Histogram: Without those who received erroneous manipulation check
 ```{r}
 df.def %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
  geom_density(alpha= .1, linetype= "dashed") + labs(x = "Credibility index") + theme(axis.title.y = element_blank()) +
@@ -182,7 +199,7 @@ df.def %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
 
 ## T-test
 
-### With complete dataset
+### Without those who received erroneous manipulation check
 ```{r}
 tadaa_t.test(data = df.def, response = credibility.index, group = experimental.group, print = "markdown")
 ```
@@ -193,7 +210,19 @@ tadaa_t.test(data = df.def, response = credibility.index, group = experimental.g
 tadaa_t.test(data = df.check, response = credibility.index, group = experimental.group, print = "markdown")
 ```
 
+## Histogram: Complete dataset
+```{r}
+df.def.error %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + labs(x = "Credibility index") + theme(axis.title.y = element_blank()) +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte()
+```
 
+## T-test: Complete dataset
+```{r}
+tadaa_t.test(data = df.def.error, response = credibility.index, group = experimental.group, print = "markdown")
+```
+ 
 # Time
 
 <br>

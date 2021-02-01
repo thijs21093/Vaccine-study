@@ -1,10 +1,11 @@
 library(tidyverse)
 library(car)
 
+
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/NL - control check")
-test <- read.csv("DATA_CONTROL_CHECK_NL-27012021.csv")
+test <- read.csv("DATA_CONTROL_CHECK_NL-01022021.csv")
 test[is.na(test)] <- 0
-df.prep <- test %>% filter(Progress > 80)
+df.prep <- test %>% filter(Progress > 80) 
 
 # Subset pc and mobile
 df.prep.mobile <- df.prep %>% filter(Q2.2_1>0)
@@ -63,6 +64,19 @@ df.total <- df.total %>%  mutate(
 ## IMCs
 df.total <- df.total %>% 
   mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Negen|negen"))==T,1,0))
+
+df.total <- df.total %>% 
+  mutate(manipulation.check = case_when(
+    Q298 == 2 & experimental.group == "advice" ~ 1,
+    Q298 == 3 & experimental.group == "no text" ~ 1,
+    Q298 == 1 ~ 0,
+    Q298 == 2 & experimental.group == "no text" ~ 0,
+    Q298 == 3 & experimental.group == "advice" ~ 0))
+
+df.total <- df.total %>% 
+  mutate(manipulation.check.failed = case_when(
+    manipulation.check == 1 ~ "passed",
+    manipulation.check == 0 ~ "failed"))
 
 # Demographics
 df.total <- df.total %>% 
@@ -166,8 +180,11 @@ df.total <- df.total %>% mutate(knowledge = case_when(
   Q16.5 == 1 | Q16.6 == 1 ~ 0))
 
 # Create subsets
-df.def <-  df.total %>%  
+df.def.error <-  df.total %>%  
   filter(age >= 18 & IMC=="1")
+
+df.def <-  df.total %>%  
+  filter(error == 0  & age >= 18 & IMC=="1")
 
 df.def <- df.def %>% mutate(duration.quartile = case_when(
   duration <= quantile(duration, probs = 0.25) ~ "Q1",
@@ -197,6 +214,9 @@ df.mobile <-  df.def %>%
 
 df.pc <-  df.def %>% 
   filter(device=="pc")
+
+df.check <-  df.def %>% 
+  filter(manipulation.check.failed=="passed")
 
 # Save data     
 save.image()
