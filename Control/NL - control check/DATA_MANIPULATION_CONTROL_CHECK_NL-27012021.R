@@ -2,22 +2,21 @@ library(tidyverse)
 library(car)
 
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/NL - control check")
-test <- read.csv("DATA_CONTROL_CHECK_NL-01022021.csv")
-test[is.na(test)] <- 0
-df.prep <- test %>% filter(Progress > 80) 
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/NL - control check")
+test.NL <- read.csv("DATA_CONTROL_CHECK_NL-01022021.csv")
+test.NL[is.na(test.NL)] <- 0
+df.prep.NL <- test.NL %>% filter(Progress > 80) %>%  select(-Q19.7_2_TEXT) 
 
 # Subset pc and mobile
-df.prep.mobile <- df.prep %>% filter(Q2.2_1>0)
-df.prep.pc<- df.prep %>% filter(Q3.2_1>0)
-
+df.prep.mobile.NL <- df.prep.NL %>% filter(Q2.2_1>0)
+df.prep.pc.NL <- df.prep.NL %>% filter(Q3.2_1>0)
 
 # Add tag
-df.prep.pc["device"] <- "pc"
-df.prep.mobile["device"] <- "mobile"
+df.prep.pc.NL["device"] <- "pc"
+df.prep.mobile.NL["device"] <- "mobile"
 
 # Recode mobile
-df.prep.mobile <- df.prep.mobile %>% 
+df.prep.mobile.NL <- df.prep.mobile.NL %>% 
   mutate(Q3.2_1 = Q2.2_1,
          Q3.2_2 = Q2.2_2,
          Q3.2_3 = Q2.2_3,
@@ -27,7 +26,7 @@ df.prep.mobile <- df.prep.mobile %>%
          Q3.3_2 = Q2.3_2,
          Q3.3_3 = Q2.3_3) # Opinion about EU
 
-df.prep.mobile <- df.prep.mobile %>% 
+df.prep.mobile.NL <- df.prep.mobile.NL %>% 
   mutate(Q6.2_1 = Q5.3,
          Q6.2_2 = Q5.4,
          Q6.2_3 = Q5.5,
@@ -37,10 +36,11 @@ df.prep.mobile <- df.prep.mobile %>%
          Q6.4 = Q5.10) # Pre-manipulation (Mobile)
 
 # Bind rows
-df.total <- rbind(df.prep.mobile, df.prep.pc)
+df.total.NL <- rbind(df.prep.mobile.NL, df.prep.pc.NL)
+df.total.NL["country"] <- "NL"
 
 # Manipulation variable
-df.total <- df.total %>% mutate(experimental.group = case_when(
+df.total.NL <- df.total.NL %>% mutate(experimental.group = case_when(
   Q421 > 0  ~ "no text",
   Q10.7 > 0 ~ "advice")) %>% 
   mutate(advice = case_when(
@@ -49,23 +49,23 @@ df.total <- df.total %>% mutate(experimental.group = case_when(
   drop_na(experimental.group)
 
 # Bind answers from manipulation 
-df.total <- df.total %>%  mutate(
+df.total.NL <- df.total.NL %>%  mutate(
   intro.first.click = Q417_First.Click + Q10.3_First.Click,
   intro.last.click = Q417_Last.Click + Q10.3_Last.Click,
   intro.submit = Q417_Page.Submit + Q10.3_Page.Submit,
   intro.click.count = Q417_Click.Count + Q10.3_Click.Count,
   manipulation.first.click =   Q10.5_First.Click,
   manipulation.last.click =  Q10.5_Last.Click,
-  manipulation.submit =  Q10.5_Page.Submit,
+  manipulation.submit =  Q10.5_Page.Submit %>% na_if(0),
   manipulation.count = Q10.5_Click.Count,
   perceived.independence = Q421 + Q10.7,
   safety = Q420 + Q10.6)
 
 ## IMCs
-df.total <- df.total %>% 
+df.total.NL <- df.total.NL %>% 
   mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Negen|negen"))==T,1,0))
 
-df.total <- df.total %>% 
+df.total.NL <- df.total.NL %>% 
   mutate(manipulation.check = case_when(
     Q298 == 2 & experimental.group == "advice" ~ 1,
     Q298 == 3 & experimental.group == "no text" ~ 1,
@@ -73,13 +73,13 @@ df.total <- df.total %>%
     Q298 == 2 & experimental.group == "no text" ~ 0,
     Q298 == 3 & experimental.group == "advice" ~ 0))
 
-df.total <- df.total %>% 
+df.total.NL <- df.total.NL %>% 
   mutate(manipulation.check.failed = case_when(
     manipulation.check == 1 ~ "passed",
     manipulation.check == 0 ~ "failed"))
 
 # Demographics
-df.total <- df.total %>% 
+df.total.NL <- df.total.NL %>% 
   mutate(female = Q19.3 %>% Recode("1=0; 2=1; 3=NA; 0=NA"),
          gender = Q19.3 %>% Recode("1='male';2='female';3=NA; 0=NA"),
          age = Q19.2_8,
@@ -130,7 +130,7 @@ df.total <- df.total %>%
 
 
 # Outcome variables
-df.total <- df.total %>% 
+df.total.NL <- df.total.NL %>% 
   mutate(benefits.vaccines = Q6.2_2%>% na_if(0),
          comments.general = Q20.6 %>% na_if(0),
          intent.vaccine = Q16.2 %>% na_if(0),
@@ -143,10 +143,10 @@ df.total <- df.total %>%
          credibility.item6 = Q15.7 %>% na_if(0)) 
   
 # Credibility index
-df.total$credibility.index <- df.total %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()
+df.total.NL$credibility.index <- df.total.NL %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()
 
 # controls
-df.total <- df.total %>%
+df.total.NL <- df.total.NL %>%
   mutate(trust.EC = Q3.2_1 %>% na_if(0),
          trust.EP = Q3.2_2 %>% na_if(0),
          trust.council = Q3.2_3 %>% na_if(0),
@@ -175,47 +175,39 @@ df.total <- df.total %>%
          duration = Duration..in.seconds./60 %>% na_if(0))
 
 # Knowledge
-df.total <- df.total %>% mutate(knowledge = case_when(
+df.total.NL <- df.total.NL %>% mutate(knowledge = case_when(
   Q16.5 == 2 & Q16.6 == 2 ~ 1,
   Q16.5 == 1 | Q16.6 == 1 ~ 0))
 
 # Create subsets
-df.def.error <-  df.total %>%  
+df.def.error.NL <-  df.total.NL %>%  
   filter(age >= 18 & IMC=="1")
 
-df.def <-  df.total %>%  
+df.def.NL <-  df.total.NL %>%  
   filter(error == 0  & age >= 18 & IMC=="1")
-
-df.def <- df.def %>% mutate(duration.quartile = case_when(
-  duration <= quantile(duration, probs = 0.25) ~ "Q1",
-  duration > quantile(duration, probs = 0.25) & duration <= quantile(duration, probs = 0.5)  ~ "Q2",
-  duration > quantile(duration, probs = 0.5) & duration <= quantile(duration, probs = 0.75)  ~ "Q3",
-  duration > quantile(duration, probs = 0.75) ~ "Q4"))
-
-df.def$duration.quartile <- factor(df.def$duration.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
 
 agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
 agecut.10 <- c(-Inf, 30, 40, 50, 60,  70, 80, Inf)
 
-df.def <- df.def %>% mutate(age.recoded = cut(age, agecut.10, c("younger than 30", "30-39", "40-49", "50-59", "60-69", "70-79", "80 or older"), right=FALSE))
-age.sample <- df.def %>% transmute(agecat = cut(age, agecut.5, c("younger than 25", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80 or older"), right=FALSE))  %>% table() %>% as_tibble()
+df.def.NL <- df.def.NL %>% mutate(age.recoded = cut(age, agecut.10, c("younger than 30", "30-39", "40-49", "50-59", "60-69", "70-79", "80 or older"), right=FALSE))
+age.sample.NL <- df.def.NL %>% transmute(agecat = cut(age, agecut.5, c("younger than 25", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80 or older"), right=FALSE))  %>% table() %>% as_tibble()
 
-age.sample <- age.sample %>% 
+age.sample.NL <- age.sample.NL %>% 
   mutate(percentage = n / sum(n))
 
-df.advice <-  df.def %>% 
+df.advice.NL <-  df.def.NL %>% 
   filter(advice == 1)
 
-df.no.text <-  df.def %>% 
+df.no.text.NL <-  df.def.NL %>% 
   filter(advice == 0)
 
-df.mobile <-  df.def %>% 
+df.mobile.NL <-  df.def.NL %>% 
   filter(device=="mobile")
 
-df.pc <-  df.def %>% 
+df.pc.NL <-  df.def.NL %>% 
   filter(device=="pc")
 
-df.check <-  df.def %>% 
+df.check.NL <-  df.def.NL %>% 
   filter(manipulation.check.failed=="passed")
 
 # Save data     

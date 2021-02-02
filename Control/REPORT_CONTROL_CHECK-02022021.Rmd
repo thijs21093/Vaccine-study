@@ -1,5 +1,5 @@
 ---
-title: "REPORT CONTROL CHECK NL V102"
+title: "REPORT CONTROL CHECK  V200"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -51,7 +51,24 @@ library(data.table)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/NL - control check/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/NL - control check/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/SE - control check/.RData")
+
+df.def.SE["error"] <- 0
+
+df.def.error <- dplyr::bind_rows(df.def.error.NL, df.def.SE)
+
+df.def.error <- df.def.error %>% mutate(duration.quartile = case_when(
+  duration <= quantile(duration, probs = 0.25) ~ "Q1",
+  duration > quantile(duration, probs = 0.25) & duration <= quantile(duration, probs = 0.5)  ~ "Q2",
+  duration > quantile(duration, probs = 0.5) & duration <= quantile(duration, probs = 0.75)  ~ "Q3",
+  duration > quantile(duration, probs = 0.75) ~ "Q4"))
+df.def.error$duration.quartile <- factor(df.def.error$duration.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
+
+df.def <-  df.def.error %>%  
+  filter(error == 0)
+df.check <- dplyr::bind_rows(df.check.NL, df.check.SE)
+df.total <- dplyr::bind_rows(df.total.NL, df.total.SE)
 
 set_theme(
   base=theme_blank(),
@@ -65,27 +82,32 @@ set_theme(
 
 Total number of participants:
 ```{r}
-df.total %>% filter(error == 0) %>% nrow()
+df.total %>% nrow()
 ```
 
 Number of participants that failed the attention test:
 ```{r}
-df.total %>% filter(error == 0) %>% nrow() - df.total %>% filter(IMC=="1" & error == 0) %>% nrow()
+df.total %>% nrow() - df.total %>% filter(IMC=="1") %>% nrow()
 ```
 
 Participants between 0-17:
 ```{r}
-df.total %>% filter(IMC=="1" & age < 18 & error == 0) %>% nrow()
+df.total %>% filter(IMC=="1" & age < 18) %>% nrow()
 ```
 
 Percentage of participants who are at least 18 years old and did not fail the IMC:
 ```{r}
-percent(df.def %>% nrow() / df.total %>% filter(error == 0) %>% nrow())
+percent(df.def.error %>% nrow() / df.total  %>% nrow())
 ```
 
 Number of participants in this analysis:
 ```{r}
-df.def %>% nrow()
+df.def.error %>% nrow()
+```
+
+With those who received the erroneous manipulation check removed:
+```{r}
+df.def.error %>% filter(error == 0)  %>%  nrow()
 ```
 
 Number of participants in the final dataset that failed the manipulation check:
@@ -97,19 +119,6 @@ Which is:
 ```{r}
 percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(), accuracy = 0.01)
 ```
-
-In more detail:
-```{r}
-df.def %>% group_by(Q298, experimental.group) %>% tally() 
-```
-
-Q298 is the manipulation check:
-<br>
-  - 1 = independence
-<br>
-  - 2 = advice (correct answer for "advice" condition)
-<br>
-  - 3 = None of these (correct answer for "no text" condition)
 
 <br>
 
@@ -141,47 +150,51 @@ sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "
 
 ### Without those who received erroneous manipulation check
 ```{r}
-df.def %>%
+ggarrange(df.def.error %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "Total") +
   scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
-  theme_tufte()
+  theme_tufte(),
+  
+  df.def.error %>% filter(country == "NL") %>% 
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "NL") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  
+    df.def.error %>% filter(country == "SE") %>% 
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "Sweden") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  
+  ncol = 3, common.legend = TRUE)
+  
 ```
 
-## T-test
+## Anova and T-test
 
-### Without those who received erroneous manipulation check
+### Total
 ```{r}
-tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.def.error, print = "markdown")
 ```
 
-### Without those who failed the manipulation check
+### Sweden
+```{r}
+tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.def.SE, print = "markdown")
+```
+
+### Netherlands
 ```{r}
 tadaa_t.test(data = df.check, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
-
-
-### With complete dataset
-```{r}
-df.def.error %>%
-  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
-  theme_tufte()
-```
-
-## T-test: With complete dataset
-```{r}
-tadaa_t.test(data = df.def.error, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
-```
- 
 
 # Credbility
 
 
 ## Description
 ```{r}
-df.def %>% 
+df.def.error %>% 
 sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
   kbl(digits= 2) %>%
  kable_paper()
@@ -189,38 +202,42 @@ sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iq
 
 <br>
 
-## Histogram: Without those who received erroneous manipulation check
+## Histogram
 ```{r}
-df.def %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
- geom_density(alpha= .1, linetype= "dashed") + labs(x = "Credibility index") + theme(axis.title.y = element_blank()) +
+ggarrange(df.def.error %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Total") +
   scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
-  theme_tufte()
-```
-
-## T-test
-
-### Without those who received erroneous manipulation check
-```{r}
-tadaa_t.test(data = df.def, response = credibility.index, group = experimental.group, print = "markdown")
-```
+  theme_tufte(),
  
+ df.def.error %>% filter(country == "NL") %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Netherlands") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.def.error %>% filter(country == "SE") %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Sweden") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  ncol = 3, common.legend = TRUE)
+ 
+```
 
-### With those who failed the manipulation check filtered out 
+## Anova and T-test
+
+### Total
+```{r}
+tadaa_aov(credibility.index ~ experimental.group, data = df.def.error, print = "markdown")
+```
+
+### Sweden
+```{r}
+tadaa_aov(credibility.index ~ experimental.group, data = df.def.SE, print = "markdown")
+```
+
+### Netherlands
 ```{r}
 tadaa_t.test(data = df.check, response = credibility.index, group = experimental.group, print = "markdown")
-```
-
-## Histogram: Complete dataset
-```{r}
-df.def.error %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
- geom_density(alpha= .1, linetype= "dashed") + labs(x = "Credibility index") + theme(axis.title.y = element_blank()) +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
-  theme_tufte()
-```
-
-## T-test: Complete dataset
-```{r}
-tadaa_t.test(data = df.def.error, response = credibility.index, group = experimental.group, print = "markdown")
 ```
  
 # Time
@@ -228,7 +245,7 @@ tadaa_t.test(data = df.def.error, response = credibility.index, group = experime
 <br>
 
 ```{r include=FALSE}
-table.duration <- df.def %>%
+table.duration <- df.def.error %>%
   dplyr::summarize(mean = mean(duration),
             sd = sd(duration),
             min = min(duration),
@@ -237,7 +254,7 @@ table.duration <- df.def %>%
             q3 = quantile(duration, probs = 0.75),
             max = max(duration)) %>% round(digits = 2)
 
-table.intro.submit <- df.def %>% 
+table.intro.submit <- df.def.error %>% 
    dplyr::summarize(mean = mean(intro.submit),
             sd = sd(intro.submit),
             min = min(intro.submit),
@@ -246,7 +263,7 @@ table.intro.submit <- df.def %>%
             q3 = quantile(intro.submit, probs = 0.75),
             max = max(intro.submit)) %>% round(digits = 2)
 
-table.manipulation.submit <- df.def %>%  
+table.manipulation.submit <- df.def.error %>%  
    dplyr::summarize(mean = mean(manipulation.submit),
             sd = sd(manipulation.submit),
             min = min(manipulation.submit),
@@ -255,7 +272,7 @@ table.manipulation.submit <- df.def %>%
             q3 = quantile(manipulation.submit, probs = 0.75),
             max = max(manipulation.submit)) %>% round(digits = 2)
 
-table.decision.submit <- df.def %>% 
+table.decision.submit <- df.def.error %>% 
    dplyr::summarize(mean = mean(decision.submit),
             sd = sd(decision.submit),
             min = min(decision.submit),
@@ -273,7 +290,7 @@ table.decision.submit <- df.def %>%
 
 ### Histogram
 ```{r}
-df.def %>% filter(duration < 30) %>% 
+df.def.error %>% filter(duration < 30) %>% 
 plot_frq((duration),
         geom.colors = alpha("red",0.8),
         type = "hist",
@@ -290,7 +307,7 @@ plot_frq((duration),
 
 ### Page submission - introduction of case
 ```{r}
-df.def %>% filter(intro.submit < 100) %>%  
+df.def.error %>% filter(intro.submit < 100) %>%  
 plot_frq((intro.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
@@ -303,7 +320,7 @@ plot_frq((intro.submit),
 
 ### Page submission - EMA's decision
 ```{r}
-df.def %>% filter(decision.submit < 100) %>% 
+df.def.error %>% filter(decision.submit < 100) %>% 
 plot_frq((decision.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
@@ -320,63 +337,21 @@ plot_frq((decision.submit),
 
 ### ...experimental groups
 ```{r}
-p5 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+p5 <- df.def.error %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p6  <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+p6  <- df.def.error %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p8 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
+p7 <- df.def.error %>% filter(manipulation.submit > 0 & manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = experimental.group, fill = experimental.group)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p5, p6, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
-```
-
-<br>
-
-T-tests (outliers removed - i.e., cases outside 1.5 times the interquartile range):
-```{r include=FALSE}
-out.duration <- boxplot(df.def$duration, plot=FALSE)$out
-out.duration <-df.def[-which(df.def$duration %in% out.duration),]
-
-out.intro.submit <- boxplot(df.def$intro.submit, plot=FALSE)$out
-out.intro.submit <-df.def[-which(df.def$intro.submit %in% out.intro.submit),]
-
-out.decision.submit <- boxplot(df.def$decision.submit, plot=FALSE)$out
-out.decision.submit <-df.def[-which(df.def$decision.submit %in% out.decision.submit),]
-```
-
-***Survey duration***
-```{r}
-tadaa_t.test(data = out.duration, response = duration, group = experimental.group, print = "markdown")
-```
-
-***Page submission - Introduction***
-```{r}
-tadaa_t.test(data = out.intro.submit, response = intro.submit, group = experimental.group, print = "markdown")
-```
-
-***Page submission - decision***
-```{r}
-tadaa_t.test(data = out.decision.submit, response = decision.submit, group = experimental.group, print = "markdown")
-```
-
-<br>
-
-### ...interface (pc/mobile)
-
-```{r}
-p9 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
-
-p10 <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
-
-
-p12 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = device, fill = device)) +
+p8 <- df.def.error %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p9, p10, p12, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+ggarrange(p5, p6, p7, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
+
+
