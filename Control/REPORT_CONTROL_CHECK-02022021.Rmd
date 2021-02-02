@@ -48,11 +48,13 @@ library(scales)
 library(ggpmisc)
 library(tadaatoolbox)
 library(data.table)
+library(psych)
 ```
 
 ```{r}
 load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/NL - control check/.RData")
 load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/SE - control check/.RData")
+
 
 df.def.SE["error"] <- 0
 
@@ -186,13 +188,14 @@ tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.def.SE
 
 ### Netherlands
 ```{r}
-tadaa_t.test(data = df.check, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def.NL, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 # Credbility
 
+## Full dataset
 
-## Description
+### Description
 ```{r}
 df.def.error %>% 
 sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
@@ -200,9 +203,7 @@ sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iq
  kable_paper()
 ```
 
-<br>
-
-## Histogram
+### Histogram
 ```{r}
 ggarrange(df.def.error %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
  geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Total") +
@@ -223,22 +224,100 @@ ggarrange(df.def.error %>% ggplot(aes(x= credibility.index, color = experimental
  
 ```
 
-## Anova and T-test
+### Anova and T-test
 
-### Total
+**Total**
 ```{r}
 tadaa_aov(credibility.index ~ experimental.group, data = df.def.error, print = "markdown")
 ```
 
-### Sweden
+**Sweden**
 ```{r}
 tadaa_aov(credibility.index ~ experimental.group, data = df.def.SE, print = "markdown")
 ```
 
-### Netherlands
+**Netherlands**
 ```{r}
-tadaa_t.test(data = df.check, response = credibility.index, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def.NL, response = credibility.index, group = experimental.group, print = "markdown")
 ```
+ 
+## credibility dimensions
+
+### Non-interference
+```{r}
+df.def.error %>% select(credibility.item1:credibility.item3.reversed) %>% psych::alpha() -> alpha.noninterference
+
+alpha.noninterference$total %>%
+  kbl(digits= 2, caption = "Cronbach's alpha: non-interference") %>%
+ kable_paper()
+```
+
+<br>
+
+### expertise
+```{r}
+ df.def.error %>% select(credibility.item4,credibility.item5) %>% psych::alpha() -> alpha.expertise
+
+alpha.expertise$total %>%
+  kbl(digits= 2, caption = "Cronbach's alpha: expertise") %>%
+ kable_paper()
+```
+
+
+
+## Filtering out those who failed the manipulation check 
+
+Participants that received the erroneous manipulation check are filtered out as well.
+
+### Description
+```{r}
+df.def %>% filter(manipulation.check.failed == "passed")  %>% 
+sjmisc::descr(credibility.index, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
+  kbl(digits= 2) %>%
+ kable_paper()
+```
+
+### Histogram
+```{r}
+ggarrange(df.def %>% filter(manipulation.check.failed == "passed")  %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Total") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def %>% filter(manipulation.check.failed == "passed" & country == "NL") %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Netherlands") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def %>%  filter(manipulation.check.failed == "passed" & country == "SE") %>% ggplot(aes(x= credibility.index, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title.y = element_blank()) + labs(y = "", title = "Sweden") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  ncol = 3, common.legend = TRUE)
+```
+
+### Anova and T-test
+
+**Total**
+```{r}
+tadaa_aov(credibility.index ~ experimental.group, data = df.check, print = "markdown")
+```
+
+**Sweden**
+```{r}
+tadaa_aov(credibility.index ~ experimental.group, data = df.check.SE, print = "markdown")
+```
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.check.NL, response = credibility.index, group = experimental.group, print = "markdown")
+```
+ 
+      
+- Analyze with the "policy credibility index" and breaking to the 3 dimensions. 
+
+
  
 # Time
 
@@ -264,13 +343,13 @@ table.intro.submit <- df.def.error %>%
             max = max(intro.submit)) %>% round(digits = 2)
 
 table.manipulation.submit <- df.def.error %>%  
-   dplyr::summarize(mean = mean(manipulation.submit),
-            sd = sd(manipulation.submit),
-            min = min(manipulation.submit),
-            q1 = quantile(manipulation.submit, probs = 0.25),
-            median = median(manipulation.submit),
-            q3 = quantile(manipulation.submit, probs = 0.75),
-            max = max(manipulation.submit)) %>% round(digits = 2)
+   dplyr::summarize(mean = mean(manipulation.submit, na.rm = TRUE),
+            sd = sd(manipulation.submit, na.rm = TRUE),
+            min = min(manipulation.submit, na.rm = TRUE),
+            q1 = quantile(manipulation.submit, probs = 0.25, na.rm = TRUE),
+            median = median(manipulation.submit, na.rm = TRUE),
+            q3 = quantile(manipulation.submit, probs = 0.75, na.rm = TRUE),
+            max = max(manipulation.submit, na.rm = TRUE)) %>% round(digits = 2)
 
 table.decision.submit <- df.def.error %>% 
    dplyr::summarize(mean = mean(decision.submit),
@@ -309,6 +388,20 @@ plot_frq((duration),
 ```{r}
 df.def.error %>% filter(intro.submit < 100) %>%  
 plot_frq((intro.submit),
+        geom.colors = alpha("dodgerblue2",0.8),
+        type = "hist",
+        geom.size = 1) + 
+  theme(axis.text = element_text(face = "bold",  size= 9)) +
+  scale_x_continuous(name="Time in seconds",breaks = seq(0,100,5)) + scale_y_continuous(expand = expansion(c(0, 0.1))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.intro.submit))
+```
+
+<br>
+
+
+### Page submission - manipulation
+```{r}
+df.def.error %>% filter(manipulation.submit > 0 & manipulation.submit < 60) %>%  
+plot_frq((manipulation.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 

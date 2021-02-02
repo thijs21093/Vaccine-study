@@ -80,11 +80,11 @@ df.total.NL <- df.total.NL %>%
 
 # Demographics
 df.total.NL <- df.total.NL %>% 
-  mutate(female = Q19.3 %>% Recode("1=0; 2=1; 3=NA; 0=NA"),
-         gender = Q19.3 %>% Recode("1='male';2='female';3=NA; 0=NA"),
+  dplyr::mutate(female = Q19.3 %>% car::recode("1=0; 2=1; 3=NA; 0=NA"),
+         gender = Q19.3 %>% car::recode("1='male';2='female';3=NA; 0=NA"),
          age = Q19.2_8,
-         healthcare = Q19.5 %>% recode("1='yes';  2='no'"),
-         education = Q19.4 %>% Recode("1='1. VMBO/Mavo';
+         healthcare = Q19.5 %>% car::recode("1='yes';  2='no'"),
+         education = Q19.4 %>% car::recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
                                       3='3. Vwo';
                                       4='4. MBO';
@@ -94,7 +94,7 @@ df.total.NL <- df.total.NL %>%
                                       8='8. WO Master of hoger';
                                       9='9. Anders';
                                       0=NA"),
-         education.recoded = Q19.4 %>% Recode("1='1. VMBO/Mavo';
+         education.recoded = Q19.4 %>% car::recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
                                       3='3. Vwo';
                                       4='4. MBO';
@@ -104,7 +104,7 @@ df.total.NL <- df.total.NL %>%
                                       8='6. WO';
                                       9= '7. Anders';
                                       0=NA"),
-         income = Q19.6  %>% recode("2='<20K';
+         income = Q19.6  %>% car::recode("2='<20K';
                                     3='20K-25K';
                                     4='25K-30K';
                                     5='30K-35K';
@@ -113,7 +113,7 @@ df.total.NL <- df.total.NL %>%
                                     8='45K-50K';
                                     9='50K>';
                                     0=NA"),
-         province = Q19.8 %>% recode("2='Noord-Holland';
+         province = Q19.8 %>% car::recode("2='Noord-Holland';
                                       3='Zuid-Holland';
                                       4='Groningen';
                                      5='Friesland';
@@ -134,16 +134,18 @@ df.total.NL <- df.total.NL %>%
   mutate(benefits.vaccines = Q6.2_2%>% na_if(0),
          comments.general = Q20.6 %>% na_if(0),
          intent.vaccine = Q16.2 %>% na_if(0),
-         intent.vaccine.recoded = Q16.2 %>% recode("1=0; 2=0; 3=1; 4=1"),
+         intent.vaccine.recoded = Q16.2 %>% car::recode("1=0; 2=0; 3=1; 4=1"),
          credibility.item1 = Q15.2 %>% na_if(0),
-         credibility.item2.reversed = Q15.3 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
-         credibility.item3.reversed = Q15.4 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
+         credibility.item2.reversed = Q15.3 %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
+         credibility.item3.reversed = Q15.4 %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item4 = Q15.5 %>% na_if(0),
          credibility.item5 = Q15.6 %>% na_if(0),
          credibility.item6 = Q15.7 %>% na_if(0)) 
   
 # Credibility index
 df.total.NL$credibility.index <- df.total.NL %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()
+df.total.NL$credibility.expert<- df.total.NL %>% dplyr::select(credibility.item4,credibility.item5) %>% base::rowMeans() %>% na_if(0)
+df.total.NL$credibility.noninterference<- df.total.NL %>% dplyr::select(credibility.item1:credibility.item3.reversed) %>% base::rowMeans() %>% na_if(0)
 
 # controls
 df.total.NL <- df.total.NL %>%
@@ -161,7 +163,7 @@ df.total.NL <- df.total.NL %>%
          credibility.EMA = Q3.3_2 %>% na_if(0),
          credibility.EFSA = Q3.3_3 %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
-         perceived.independence.reversed = perceived.independence %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
+         perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
          consequences.economic =  Q6.3_2 %>% na_if(0),
          importance.EMA = Q16.7_1 %>% na_if(0),
