@@ -140,7 +140,8 @@ df.total.NL <- df.total.NL %>%
          credibility.item3.reversed = Q15.4 %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item4 = Q15.5 %>% na_if(0),
          credibility.item5 = Q15.6 %>% na_if(0),
-         credibility.item6 = Q15.7 %>% na_if(0)) 
+         credibility.item6 = Q15.7 %>% na_if(0),
+         credibility.stability = Q15.7 %>% na_if(0)) 
   
 # Credibility index
 df.total.NL$credibility.index <- df.total.NL %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()

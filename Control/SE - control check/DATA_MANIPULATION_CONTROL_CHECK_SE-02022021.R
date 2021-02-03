@@ -141,7 +141,7 @@ df.total.SE <- df.total.SE %>%
          credibility.item5 = Q15.6 %>% na_if(0),
          credibility.item6 = Q15.7 %>% na_if(0),
          credibility.stability = Q15.7 %>% na_if(0)) 
-  
+
 # Credibility index
 df.total.SE$credibility.index <- df.total.SE %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()  %>% na_if(0)
 df.total.SE$credibility.expert<- df.total.SE %>% dplyr::select(credibility.item4,credibility.item5) %>% base::rowMeans() %>% na_if(0)

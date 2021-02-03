@@ -138,9 +138,11 @@ df.def %>%
 
 <br>
 
-## Description
+## Full dataset
+
+### Description
 ```{r}
-df.def %>% 
+df.def.error %>% 
 sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
   kbl(digits= 2) %>%
  kable_paper()
@@ -148,9 +150,7 @@ sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "
 
 <br>
 
-## Histogram
-
-### Without those who received erroneous manipulation check
+### Histogram
 ```{r}
 ggarrange(df.def.error %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
@@ -174,21 +174,80 @@ ggarrange(df.def.error %>%
   
 ```
 
-## Anova and T-test
+<br>
 
-### Total
+### Anova and T-test
+
+<br>
+
+**Total**
 ```{r}
 tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.def.error, print = "markdown")
 ```
 
-### Sweden
+**Sweden**
 ```{r}
 tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.def.SE, print = "markdown")
 ```
 
-### Netherlands
+**Netherlands**
 ```{r}
-tadaa_t.test(data = df.def.NL, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def.error.NL, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+## With those who failed the manipulation check filtered out
+
+Participants that received the erroneous manipulation check are filtered out as well.
+
+### Description
+```{r}
+df.def %>% filter(manipulation.check.failed == "passed")  %>%  
+sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
+  kbl(digits= 2) %>%
+ kable_paper()
+```
+
+### Histogram
+```{r}
+ggarrange(df.check %>%
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "Total") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  
+  df.check %>% filter(country == "NL") %>% 
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "NL") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  
+    df.check %>% filter(country == "SE") %>% 
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) + labs(y = "", title = "Sweden") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  
+  ncol = 3, common.legend = TRUE)
+  
+```
+
+### Anova and T-test
+
+**Total**
+```{r}
+tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.check, print = "markdown")
+```
+
+**Sweden**
+```{r}
+tadaa_aov(perceived.independence.reversed ~ experimental.group, data = df.check.SE, print = "markdown")
+```
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.check.NL, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 # Credbility
@@ -238,32 +297,9 @@ tadaa_aov(credibility.index ~ experimental.group, data = df.def.SE, print = "mar
 
 **Netherlands**
 ```{r}
-tadaa_t.test(data = df.def.NL, response = credibility.index, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.def.error.NL, response = credibility.index, group = experimental.group, print = "markdown")
 ```
  
-## credibility dimensions
-
-### Non-interference
-```{r}
-df.def.error %>% select(credibility.item1:credibility.item3.reversed) %>% psych::alpha() -> alpha.noninterference
-
-alpha.noninterference$total %>%
-  kbl(digits= 2, caption = "Cronbach's alpha: non-interference") %>%
- kable_paper()
-```
-
-<br>
-
-### expertise
-```{r}
- df.def.error %>% select(credibility.item4,credibility.item5) %>% psych::alpha() -> alpha.expertise
-
-alpha.expertise$total %>%
-  kbl(digits= 2, caption = "Cronbach's alpha: expertise") %>%
- kable_paper()
-```
-
-
 
 ## Filtering out those who failed the manipulation check 
 
@@ -313,12 +349,291 @@ tadaa_aov(credibility.index ~ experimental.group, data = df.check.SE, print = "m
 ```{r}
 tadaa_t.test(data = df.check.NL, response = credibility.index, group = experimental.group, print = "markdown")
 ```
- 
-      
-- Analyze with the "policy credibility index" and breaking to the 3 dimensions. 
+
+<br >
+
+# Credibility dimensions
+
+## Correlation matrix
+```{r}
+df.def.error %>% select(credibility.expert, credibility.noninterference, credibility.stability) %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           fade.ns = T,
+           digits = 2,
+           na.deletion="pairwise",
+           title = "Correlation matrix: credibility dimensions")
+```
+
+## Internal consistency
+
+### Non-interference
+```{r}
+df.def.error %>% select(credibility.item1:credibility.item3.reversed) %>% psych::alpha() -> alpha.noninterference
+
+alpha.noninterference$total %>%
+  kbl(digits= 2, caption = "Cronbach's alpha: non-interference") %>%
+ kable_paper()
+```
+
+<br>
+
+### Expertise
+```{r}
+ df.def.error %>% select(credibility.item4,credibility.item5) %>% psych::alpha() -> alpha.expertise
+
+alpha.expertise$total %>%
+  kbl(digits= 2, caption = "Cronbach's alpha: expertise") %>%
+ kable_paper()
+```
 
 
+## Description
+```{r}
+df.def.error %>% select(credibility.expert, credibility.noninterference, credibility.stability)  %>% 
+sjmisc::descr(show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
+  kbl(digits= 2) %>%
+ kable_paper()
+```
+
+## Histogram
+```{r}
+ggarrange(df.def.error %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
  
+ df.def.error %>% filter(country == "NL") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.def.error %>% filter(country == "SE") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% filter(country == "NL") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.def.error %>% filter(country == "SE") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% filter(country == "NL") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.def.error %>% filter(country == "SE") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  ncol = 3, nrow = 3, common.legend = TRUE)
+```
+
+## Anova and T-test
+
+### Total
+
+<br>
+
+**Expertise:**
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.def.error, print = "markdown")
+```
+
+<br>
+
+**Stability:**
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.def.error, print = "markdown")
+```
+
+<br>
+
+**Non-interference:**
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.def.error, print = "markdown")
+```
+
+<br>
+
+### Sweden
+
+<br>
+
+**Expertise:**
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.def.SE, print = "markdown")
+```
+
+<br>
+
+**Stability:**
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.def.SE, print = "markdown")
+```
+
+<br>
+
+**Non-interference:**
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.def.SE, print = "markdown")
+```
+
+<br>
+
+### Netherlands
+
+<br>
+
+**Expertise:**
+```{r}
+tadaa_t.test(data = df.def.NL, response = credibility.expert, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+**Stability:**
+```{r}
+tadaa_t.test(data = df.def.NL, response = credibility.stability, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+**Non-interference:**
+```{r}
+tadaa_t.test(data = df.def.NL, response = credibility.noninterference, group = experimental.group, print = "markdown")
+```
+ 
+
+## Filtering out those who failed the manipulation check 
+
+Participants that received the erroneous manipulation check are filtered out as well.
+
+### Histograms
+```{r}
+ggarrange(df.check %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.check %>% filter(country == "NL") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.check %>% filter(country == "SE") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.check %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.check %>% filter(country == "NL") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.check %>% filter(country == "SE") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.check %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.check %>% filter(country == "NL") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.check %>% filter(country == "SE") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  ncol = 3, nrow = 3, common.legend = TRUE)
+```
+
+
+### ANOVA and t-tests
+
+**Total**
+
+<br>
+
+Expertise:
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.check, print = "markdown")
+```
+
+<br>
+
+Stability:
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.check, print = "markdown")
+```
+
+<br>
+
+Non-interference:
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check, print = "markdown")
+```
+
+<br>
+
+**Sweden**
+
+<br>
+
+Expertise:
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.check.SE, print = "markdown")
+```
+
+<br>
+
+Stability:
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.check.SE, print = "markdown")
+```
+
+<br>
+
+Non-interference:
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check.SE, print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+
+<br>
+
+Expertise:
+```{r}
+tadaa_t.test(data = df.check.NL, response = credibility.expert, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+Stability:
+```{r}
+tadaa_t.test(data = df.check.NL, response = credibility.stability, group = experimental.group, print = "markdown")
+```
+
+<br>
+
+Non-interference:
+```{r}
+tadaa_t.test(data = df.check.NL, response = credibility.noninterference, group = experimental.group, print = "markdown")
+```
+ 
+
 # Time
 
 <br>
@@ -371,7 +686,7 @@ table.decision.submit <- df.def.error %>%
 ```{r}
 df.def.error %>% filter(duration < 30) %>% 
 plot_frq((duration),
-        geom.colors = alpha("red",0.8),
+        geom.colors = ggplot2::alpha("red",0.8),
         type = "hist",
         geom.size = 0.25) +
   theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) + scale_y_continuous(expand = expansion(c(0, 0.25))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
@@ -388,7 +703,7 @@ plot_frq((duration),
 ```{r}
 df.def.error %>% filter(intro.submit < 100) %>%  
 plot_frq((intro.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = ggplot2::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
@@ -402,7 +717,7 @@ plot_frq((intro.submit),
 ```{r}
 df.def.error %>% filter(manipulation.submit > 0 & manipulation.submit < 60) %>%  
 plot_frq((manipulation.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = ggplot2::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
@@ -415,7 +730,7 @@ plot_frq((manipulation.submit),
 ```{r}
 df.def.error %>% filter(decision.submit < 100) %>% 
 plot_frq((decision.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = ggplot2::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
