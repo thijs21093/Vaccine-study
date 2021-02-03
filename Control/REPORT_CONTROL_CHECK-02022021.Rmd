@@ -43,6 +43,7 @@ library(tidyverse)
 library(car)
 library(ggthemes)
 library(kableExtra)
+library(lme4)
 library(ggpubr)
 library(scales)
 library(ggpmisc)
@@ -73,6 +74,10 @@ df.def.error <- df.def.error %>% mutate(intro.submit.recoded = case_when(
 df.def.error$duration.quartile <- factor(df.def.error$duration.quartile, levels = c("Q1", "Q2", "Q3", "Q4"))
 
 df.def.error$experimental.group <- factor(df.def.error$experimental.group, levels = c("no text", "advice", "independence"))
+
+df.def <-  df.def.error %>%  
+  filter(error == 0)
+
 df.def$experimental.group <- factor(df.def$experimental.group, levels = c("no text", "advice", "independence"))
 df.def.error.NL$experimental.group <- factor(df.def.error.NL$experimental.group, levels = c("no text", "advice"))
 df.def.NL$experimental.group <- factor(df.def.NL$experimental.group, levels = c("no text", "advice"))
@@ -80,10 +85,9 @@ df.check.NL$experimental.group <- factor(df.check.NL$experimental.group, levels 
 df.def.SE$experimental.group <- factor(df.def.SE$experimental.group, levels = c("no text", "advice", "independence"))
 df.check.SE$experimental.group <- factor(df.check.SE$experimental.group, levels = c("no text", "advice", "independence"))
 
-df.def <-  df.def.error %>%  
-  filter(error == 0)
 df.check <- dplyr::bind_rows(df.check.NL, df.check.SE)
 df.total <- dplyr::bind_rows(df.total.NL, df.total.SE)
+
 
 set_theme(
   base=theme_blank(),
@@ -614,17 +618,7 @@ tadaa_t.test(data = df.def.error %>% filter(country == "NL" & intro.submit.recod
 
 # Credibility dimensions
 
-## Correlation matrix
-```{r}
-df.def.error %>% select(credibility.expert, credibility.noninterference, credibility.stability) %>% 
-  tab_corr(triangle="lower",
-           remove.spaces=T,
-           p.numeric = T,
-           fade.ns = T,
-           digits = 2,
-           na.deletion="pairwise",
-           title = "Correlation matrix: credibility dimensions")
-```
+
 
 ## Internal consistency
 
@@ -656,6 +650,11 @@ sjmisc::descr(show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "ran
   kbl(digits= 2) %>%
  kable_paper()
 ```
+
+```{r}
+
+```
+
 
 ## Histogram
 ```{r}
@@ -871,28 +870,114 @@ ggarrange(df.check %>% ggplot(aes(x= credibility.expert, color = experimental.gr
   ncol = 3, nrow = 3, common.legend = TRUE)
 ```
 
-
-### ANOVA and t-tests
-
-**Total**
+### Expertise
 
 <br>
 
-Expertise:
+**Regression**
+```{r}
+reg.credibility.expertise.total.check <- lm(credibility.expert ~  experimental.group,
+                    data = df.check,
+                    na.action = na.omit)
+
+reg.credibility.expertise.SE.check <- lm(credibility.expert ~ experimental.group,
+                    data =  df.check %>% filter(country == "SE"),
+                    na.action = na.omit)
+
+reg.credibility.NL.check <- lm(credibility.expert ~  experimental.group,
+                    data =   df.check %>% filter(country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.expertise.total.check, reg.credibility.expertise.SE.check, reg.credibility.NL.check, dv.labels = c("Expertise - Total", "Expertise - SE", "Expertise - NL"), title = "Expertise - filter: manipulation check", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
 ```{r}
 tadaa_aov(credibility.expert ~ experimental.group, data = df.check, print = "markdown")
 ```
 
 <br>
 
-Stability:
+**Sweden**
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.check %>% filter(country == "SE"), print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.check %>% filter(country == "NL"), response = credibility.expert, group = experimental.group, print = "markdown")
+```
+
+### Stability
+
+<br>
+
+**Regression**
+```{r}
+reg.credibility.stability.total.check <- lm(credibility.stability ~  experimental.group,
+                    data = df.check,
+                    na.action = na.omit)
+
+reg.credibility.stability.SE.check <- lm(credibility.stability ~ experimental.group,
+                    data =  df.check %>% filter(country == "SE"),
+                    na.action = na.omit)
+
+reg.stability.NL.check <- lm(credibility.stability ~  experimental.group,
+                    data =   df.check %>% filter(country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.stability.total.check , reg.credibility.stability.SE.check , reg.stability.NL.check , dv.labels = c("Stability - Total", "Stability - SE", "Stability - NL"), title = "Stability - filter: manipulation check", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
 ```{r}
 tadaa_aov(credibility.stability ~ experimental.group, data = df.check, print = "markdown")
 ```
 
 <br>
 
-Non-interference:
+**Sweden**
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.check %>% filter(country == "SE"), print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.check %>% filter(country == "NL"), response = credibility.stability, group = experimental.group, print = "markdown")
+```
+
+### Non-interference
+
+<br>
+
+**Regression**
+```{r}
+reg.credibility.noninterference.total.check <- lm(credibility.noninterference ~  experimental.group,
+                    data = df.check,
+                    na.action = na.omit)
+
+reg.credibility.noninterference.SE.check <- lm(credibility.noninterference ~ experimental.group,
+                    data =  df.check %>% filter(country == "SE"),
+                    na.action = na.omit)
+
+reg.noninterference.NL.check <- lm(credibility.noninterference ~  experimental.group,
+                    data =   df.check %>% filter(country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.noninterference.total.check, reg.credibility.noninterference.SE.check, reg.noninterference.NL.check, dv.labels = c("Non-interference - Total", "Non-interference - SE", "Non-interference - NL"), title = "Non-interference - filter: manipulation check", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
 ```{r}
 tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check, print = "markdown")
 ```
@@ -900,53 +985,251 @@ tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check, pri
 <br>
 
 **Sweden**
-
-<br>
-
-Expertise:
 ```{r}
-tadaa_aov(credibility.expert ~ experimental.group, data = df.check.SE, print = "markdown")
-```
-
-<br>
-
-Stability:
-```{r}
-tadaa_aov(credibility.stability ~ experimental.group, data = df.check.SE, print = "markdown")
-```
-
-<br>
-
-Non-interference:
-```{r}
-tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check.SE, print = "markdown")
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.check %>% filter(country == "SE"), print = "markdown")
 ```
 
 <br>
 
 **Netherlands**
-
-<br>
-
-Expertise:
 ```{r}
-tadaa_t.test(data = df.check.NL, response = credibility.expert, group = experimental.group, print = "markdown")
+tadaa_t.test(data = df.check %>% filter(country == "NL"), response = credibility.noninterference, group = experimental.group, print = "markdown")
 ```
 
-<br>
+## Only those who spent more time on the introduction page of the case than the median participant
 
-Stability:
+### Histograms
 ```{r}
-tadaa_t.test(data = df.check.NL, response = credibility.stability, group = experimental.group, print = "markdown")
-```
-
-<br>
-
-Non-interference:
-```{r}
-tadaa_t.test(data = df.check.NL, response = credibility.noninterference, group = experimental.group, print = "markdown")
-```
+ggarrange(df.def.error %>% filter(intro.submit.recoded == "> median")  %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
  
+df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE") %>% ggplot(aes(x= credibility.expert, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: expertise") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% filter(intro.submit.recoded == "> median") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+  df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE") %>% ggplot(aes(x= credibility.stability, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: stability") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+ df.def.error %>% filter(intro.submit.recoded == "> median") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Total: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Netherlands: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+ 
+df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE") %>% ggplot(aes(x= credibility.noninterference, color = experimental.group)) +
+ geom_density(alpha= .1, linetype= "dashed") + theme(axis.title = element_blank()) + labs(y = "", title = "Sweden: non-interference") +  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Condition") +  scale_fill_viridis_d(name = "Condition") + 
+  theme_tufte(),
+  ncol = 3, nrow = 3, common.legend = TRUE)
+```
+
+### Expertise
+
+<br>
+
+**Regression**
+```{r}
+reg.credibility.expertise.total.intro <- lm(credibility.expert ~  experimental.group,
+                    data = df.def.error %>% filter(intro.submit.recoded == "> median"),
+                    na.action = na.omit)
+
+reg.credibility.expertise.SE.intro <- lm(credibility.expert ~ experimental.group,
+                    data =  df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"),
+                    na.action = na.omit)
+
+reg.credibility.NL.intro <- lm(credibility.expert ~  experimental.group,
+                    data =   df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.expertise.total.intro , reg.credibility.expertise.SE.intro, reg.credibility.NL.intro, dv.labels = c("Expertise - Total", "Expertise - SE", "Expertise - NL"), title = "Expertise - filter: introduction of case", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median"), print = "markdown")
+```
+
+<br>
+
+**Sweden**
+```{r}
+tadaa_aov(credibility.expert ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"), print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.def.error %>% filter(intro.submit.recoded == "> median"& country == "NL"), response = credibility.expert, group = experimental.group, print = "markdown")
+```
+
+### Stability
+
+<br>
+
+**Regression**
+```{r}
+reg.credibility.stability.total.intro <- lm(credibility.stability ~  experimental.group,
+                    data = df.def.error %>% filter(intro.submit.recoded == "> median"),
+                    na.action = na.omit)
+
+reg.credibility.stability.SE.intro <- lm(credibility.stability ~ experimental.group,
+                    data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"),
+                    na.action = na.omit)
+
+reg.stability.NL.intro <- lm(credibility.stability ~  experimental.group,
+                    data =   df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.stability.total.intro, reg.credibility.stability.SE.intro, reg.stability.NL.intro , dv.labels = c("Stability - Total", "Stability - SE", "Stability - NL"), title = "Stability -  filter: introduction of case", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median"), print = "markdown")
+```
+
+<br>
+
+**Sweden**
+```{r}
+tadaa_aov(credibility.stability ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"), print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL"), response = credibility.stability, group = experimental.group, print = "markdown")
+```
+
+### Non-interference
+
+<br>
+
+**Regression**
+```{r}
+reg.credibility.noninterference.total.intro <- lm(credibility.noninterference ~  experimental.group,
+                    data = df.def.error %>% filter(intro.submit.recoded == "> median"),
+                    na.action = na.omit)
+
+reg.credibility.noninterference.SE.intro <- lm(credibility.noninterference ~ experimental.group,
+                    data =  df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"),
+                    na.action = na.omit)
+
+reg.noninterference.NL.intro <- lm(credibility.noninterference ~  experimental.group,
+                    data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL"),
+                    na.action = na.omit)
+
+tab_model(reg.credibility.noninterference.total.intro, reg.credibility.noninterference.SE.intro, reg.noninterference.NL.intro, dv.labels = c("Non-interference - Total", "Non-interference - SE", "Non-interference - NL"), title = "Non-interference - filter: introduction of case", show.ci = FALSE)
+```
+
+<br>
+
+**Total**
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median"), print = "markdown")
+```
+
+<br>
+
+**Sweden**
+```{r}
+tadaa_aov(credibility.noninterference ~ experimental.group, data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "SE"), print = "markdown")
+```
+
+<br>
+
+**Netherlands**
+```{r}
+tadaa_t.test(data = df.def.error %>% filter(intro.submit.recoded == "> median" & country == "NL"), response = credibility.noninterference, group = experimental.group, print = "markdown")
+```
+
+# Pre-post
+
+## Correlation matrix
+```{r}
+df.def.error %>% 
+  select(credibility.EMA,
+         credibility.post,
+         credibility.expert,
+         credibility.noninterference,
+         credibility.stability,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         ) %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           fade.ns = T,
+           digits = 2,
+           na.deletion="pairwise",
+           title = "Correlation matrix")
+```
+
+
+```{r}
+df.def.error  %>% 
+  select(experimental.group,
+         credibility.EMA,
+         credibility.post) %>%  drop_na() %>% 
+  gather("key","value",-experimental.group) %>% 
+  mutate(key = Recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'")) %>%
+
+ggplot(aes(x=key,y=value,color=experimental.group))+
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
+  stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group))+
+  theme_tufte()
+```
+
+
+```{r}
+t1 <- df.def.error %>% mutate(id = row_number()) %>% 
+  select(experimental.group,
+         id,
+         credibility.EMA,
+         credibility.post) %>%
+  drop_na() %>%
+  gather("key","value",-experimental.group,-id) %>% 
+  mutate(post = key %>% Recode("'credibility.EMA'= 0;'credibility.post'=1"),
+         EMA.credibility = value) 
+
+
+tmod1 <- lmer(EMA.credibility ~ post + +(1|id),
+                       data = t1)
+
+tmod2 <- tmod1 %>% update(.~.+experimental.group) 
+
+
+tmod3 <- tmod2 %>% update(.~. + post*experimental.group)
+
+tab_model(tmod2,tmod3,
+          show.ci = F,
+          show.se = T,
+          collapse.se = T,
+          emph.p = F)
+```
 
 # Time
 
@@ -1065,15 +1348,12 @@ p5 <- df.def.error %>% filter(duration < 30) %>% ggplot(aes(x= duration, color =
 p6  <- df.def.error %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p7 <- df.def.error %>% filter(manipulation.submit > 0 & manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = experimental.group, fill = experimental.group)) +
- geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
 p8 <- df.def.error %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p5, p6, p7, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+ggarrange(p5, p6, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
 
 
