@@ -3,7 +3,7 @@ library(car)
 
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/SE - control check")
-test.SE <- read.csv("DATA_CONTROL_CHECK_SE-03022021.csv")
+test.SE <- read.csv("DATA_CONTROL_CHECK_SE-05022021.csv")
 test.SE[is.na(test.SE)] <- 0
 df.prep.SE <- test.SE %>% filter(Progress > 80) %>%  select(-Q19.7_2_TEXT) 
 
