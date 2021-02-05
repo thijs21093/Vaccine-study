@@ -1185,7 +1185,6 @@ model.credibility.noninterference <- lm(credibility.noninterference ~ perceived.
                     na.action = na.omit) %>% meanCenter()
 
 tab_model(model.credibility.index, model.credibility.stability, model.credibility.expertise, model.credibility.noninterference, dv.labels = c("Credibility index", "Stability", "Expertise", "Non-interference"), title = "Explaining credibility - index and dimensions", show.ci = FALSE)
-
 ```
 
 # Pre-post

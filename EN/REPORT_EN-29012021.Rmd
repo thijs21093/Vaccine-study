@@ -1,5 +1,5 @@
 ---
-title: "Report COVID study EN V100"
+title: "Report COVID study EN V101"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -48,6 +48,7 @@ library(scales)
 library(ggpmisc)
 library(tadaatoolbox)
 library(rockchalk)
+library(lme4)
 ```
 
 ```{r}
@@ -566,6 +567,78 @@ df.def %>%
 ```
 
 <br>
+
+# Pre-post
+
+
+## Correlation matrix
+```{r}
+df.def %>% 
+  select(credibility.EMA,
+         credibility.post,
+         credibility.expert,
+         credibility.noninterference,
+         credibility.stability,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         ) %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           fade.ns = T,
+           digits = 2,
+           na.deletion="pairwise",
+           title = "Correlation matrix")
+```
+
+<br >
+
+## Plot
+```{r}
+df.def  %>% 
+  dplyr::select(experimental.group,
+         credibility.EMA,
+         credibility.post) %>%  drop_na() %>% 
+  gather("key","value",-experimental.group) %>% 
+  mutate(key = car::recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'")) %>%
+
+ggplot(aes(x=key,y=value,color=experimental.group))+
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
+  stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group))+
+  theme_tufte()
+```
+
+<br >
+
+## Regression
+```{r}
+t1 <- df.def %>% mutate(id = row_number()) %>% 
+  select(experimental.group,
+         id,
+         credibility.EMA,
+         credibility.post) %>%
+  drop_na() %>%
+  gather("key","value",-experimental.group,-id) %>% 
+  mutate(post = key %>% Recode("'credibility.EMA'= 0;'credibility.post'=1"),
+         EMA.credibility = value) 
+
+
+tmod1 <- lmer(EMA.credibility ~ post + +(1|id),
+                       data = t1)
+
+tmod2 <- tmod1 %>% update(.~.+experimental.group) 
+
+
+tmod3 <- tmod2 %>% update(.~. + post*experimental.group)
+
+tab_model(tmod2,tmod3,
+          show.ci = F,
+          show.se = T,
+          collapse.se = T,
+          emph.p = F)
+```
 
 ## Key variables
 

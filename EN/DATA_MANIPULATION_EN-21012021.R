@@ -2,7 +2,7 @@ library(tidyverse)
 library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/EN")
-test <- read.csv("DATA_EN-29012021.csv", sep = ";")
+test <- read.csv("DATA_EN-04022021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
@@ -152,10 +152,13 @@ df.total <- df.total %>%
          credibility.item3.reversed = Q15.4 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item4 = Q15.5 %>% na_if(0),
          credibility.item5 = Q15.6 %>% na_if(0),
-         credibility.item6 = Q15.7 %>% na_if(0)) 
+         credibility.item6 = Q15.7 %>% na_if(0),
+         credibility.stability = Q15.7 %>% na_if(0)) 
   
 # Credibility index
 df.total$credibility.index <- df.total %>% dplyr::select(credibility.item1:credibility.item6) %>% base::rowMeans()
+df.total$credibility.expert<- df.total%>% dplyr::select(credibility.item4,credibility.item5) %>% base::rowMeans() %>% na_if(0)
+df.total$credibility.noninterference<- df.total %>% dplyr::select(credibility.item1:credibility.item3.reversed) %>% base::rowMeans() %>% na_if(0)
 
 # controls
 df.total <- df.total %>%
@@ -172,6 +175,7 @@ df.total <- df.total %>%
          credibility.ECB = Q3.3_1 %>% na_if(0),
          credibility.EMA = Q3.3_2 %>% na_if(0),
          credibility.EFSA = Q3.3_3 %>% na_if(0),
+         credibility.post = Q160 %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
          perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
