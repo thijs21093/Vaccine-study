@@ -1,8 +1,8 @@
 library(tidyverse)
 library(car)
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/EN")
-test <- read.csv("DATA_EN-10022021.csv")
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/FR")
+test <- read.csv("DATA_FR_10022021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
@@ -28,6 +28,7 @@ df.prep.mobile <- df.prep.mobile %>%
          Q3.2_3 = Q2.2_3,
          Q3.2_4 = Q2.2_4,
          Q3.2_5 = Q2.2_5,
+         # Q3.2_6 = Q2.2_6,
          Q3.3_1 = Q2.3_1,
          Q3.3_2 = Q2.3_2,
          Q3.3_3 = Q2.3_3) # Opinion about EU
@@ -40,6 +41,8 @@ df.prep.mobile <- df.prep.mobile %>%
          Q6.3_1 = Q5.8,
          Q6.3_2 = Q5.9,
          Q6.4 = Q5.10) # Pre-manipulation (Mobile)
+
+# media toevoegen
 
 # Bind rows
 df.total <- rbind(df.prep.mobile, df.prep.unknown, df.prep.pc)
@@ -68,13 +71,13 @@ df.total <- df.total %>%  mutate(
 
 ## IMCs
 df.total <- df.total %>% 
-  mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nine|nine"))==T,1,0))
+  mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nuef|neuf"))==T,1,0))
 
 df.total <- df.total %>% 
   mutate(manipulation.check = case_when(
    Q298 == 1 & experimental.group == "treatment" ~ 1,
    Q298 == 2 & experimental.group == "control" ~ 1,
-   Q298 == 3 ~ - 0,
+   Q298 == 3 ~ 0,
    Q298 == 1 & experimental.group == "control" ~ 0,
    Q298 == 2 & experimental.group == "treatment" ~ 0))
 
@@ -86,18 +89,16 @@ df.total <- df.total %>%
 # Demographics
 df.total <- df.total %>% 
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
-         age = Q19.2_8 %>% na_if(0),
+         age = Q19.2_1 %>% na_if(0),
          healthcare = Q19.5 %>% recode("1='yes';  2='no'"),
-         education.recoded = Q19.4 %>% Recode("1='1. Primary';
-         2='2. Lower secondary';
-         3='3. Upper secondary';
-         4='4. Post leaving cert';
-         5='5. Higher certificate';
-         6='6. Ordinary bachelor degree/professional qualification or both';
-         7='7. Honours bachelor degree/professional qualification or both';
-         8='8. Postgraduate diploma/degree or Doctorate (Ph.D.)';
-         10='8. Postgraduate diploma/degree or Doctorate (Ph.D.)';
-         9='9. Other'"),
+         education.recoded = Q19.4 %>% Recode("1='1. Less than primary, primary and lower secondary education (levels 0-2)';
+         2='1. Less than primary, primary and lower secondary education (levels 0-2)';
+         3='2. Upper secondary and post-secondary non-tertiary education (levels 3 and 4)';
+         4='3. Tertiary education (levels 5-8)';
+         5='3. Tertiary education (levels 5-8)';
+         6='3. Tertiary education (levels 5-8)';
+         7='3. Tertiary education (levels 5-8)';
+         8='4. Other'"),
                   income = Q19.6  %>% recode("2='<20K';
                                     3='20K-25K';
                                     4='25K-30K';
@@ -107,37 +108,19 @@ df.total <- df.total %>%
                                     8='45K-50K';
                                     9='50K>';
                                     0=NA"),
-         province = Q19.8 %>% recode("1 = 'Carlow County Council';
-2 = 'Cavan County Council';
-3 = 'Clare County Council';
-4 = 'Cork City Council';
-5 = 'Cork County Council';
-6 = 'Donegal County Council';
-7 = 'Dublin City Council';
-8 = 'Dún Laoghaire-Rathdown County Council';
-9 = 'Fingal County Council';
-10 = 'Galway City Council';
-11 = 'Galway County Council';
-12 = 'Kerry County Council';
-13 = 'Kildare County Council';
-14 = 'Kilkenny County Council';
-15 = 'Laois County Council';
-16 = 'Leitrim County Council';
-17 = 'Limerick City and County Council';
-18 = 'Longford County Council';
-19 = 'Louth County Council';
-20 = 'Mayo County Council';
-21 = 'Meath County Council';
-22 = 'Monaghan County Council';
-23 = 'Offaly County Council';
-24 = 'Roscommon County Council';
-25 = 'Sligo County Council';
-26 = 'South Dublin County Council';
-27 = 'Tipperary County Council';
-28 = 'Waterford City and County Council';
-29 = 'Westmeath County Council';
-30 = 'Wexford County Council';
-31 = 'Wicklow County Council'") %>% na_if(0),
+         province = Q19.8 %>% recode("1 = 'Auvergne-Rhônes-Alpes';
+2 = 'Bourgogne-Franche-Comté';
+3 = 'Bretagne';
+4 = 'Centre-Val de Loire';
+5 = 'Corse';
+6 = 'Grande Est';
+7 = 'Hauts-de-France';
+8 = 'Ile-de-France';
+9 = 'Normandie';
+10 = 'Nouvelle-Aquitaine';
+11 = 'Occitanie';
+12 = 'Pays de la Loire';
+13 = 'Provence-Alpes-Côte d`Azur'") %>% na_if(0),
          native.language = Q19.9%>% na_if(0))
 
 
@@ -167,6 +150,7 @@ df.total <- df.total %>%
          trust.council = Q3.2_3 %>% na_if(0),
          trust.scientist = Q3.2_4 %>% na_if(0),
          trust.politicians = Q3.2_5 %>% na_if(0),
+         # trust.media = Q3.2_6 %>% na_if(0),
          political.ideology = Q4.2 %>% na_if(0),
          EU.integration = Q4.3 %>% na_if(0),
          interpersonal.trust = Q4.4 %>% na_if(0),
@@ -175,7 +159,7 @@ df.total <- df.total %>%
          credibility.ECB = Q3.3_1 %>% na_if(0),
          credibility.EMA = Q3.3_2 %>% na_if(0),
          credibility.EFSA = Q3.3_3 %>% na_if(0),
-         credibility.post = Q160 %>% na_if(0),
+         credibility.post = Q86 %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
          perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
