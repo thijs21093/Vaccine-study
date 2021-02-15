@@ -1,5 +1,5 @@
 ---
-title: "Report COVID study FR V100"
+title: "Report COVID study FR V102"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -52,7 +52,7 @@ library(lme4)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/FR/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/.RData")
 
 set_theme(
   base=theme_blank(),
@@ -617,24 +617,39 @@ df.def %>%
 
 <br >
 
-## Plot
-```{r}
-x <- df.def  %>% 
+## Plots
+
+### Total
+```{r warning=TRUE}
+table.prepost <- df.def  %>% 
   select(experimental.group,
          credibility.EMA,
          credibility.post,
          device) %>%
   gather("key","value",-experimental.group, -device) %>% 
-  mutate(key = recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'")) # %>%
+  mutate(key = recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'"))
   
-x %>%  ggplot(aes(x=key,y=value,color=experimental.group))+
+ggarrange(table.prepost %>% ggplot(aes(x=key,y=value,color=experimental.group))+
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
   stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
-  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) + facet_grid(vars(device))
-  theme_tufte()
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) +
+  theme_tufte(),
+  
+  table.prepost %>% ggplot( aes(x=key,y=value,color=experimental.group))+
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
+  stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) + facet_grid(vars(device)) +
+  theme_tufte(), common.legend = TRUE, legend	= "bottom", ncol = 2)
 ```
 
 <br >
+
+This code returns a warning. However, the resulting dataframe does not have NAs:
+```{r}
+colSums(is.na(table.prepost))
+```
+
+
 
 ## Regression
 ```{r}
