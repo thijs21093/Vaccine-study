@@ -3,11 +3,11 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/DATA_EN-12022021.csv") %>%
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/DATA_EN-15022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "IE",
          check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/DATA_FR-12022021.csv") %>%
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/DATA_FR-15022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "FR",
          check = "no")
@@ -182,8 +182,8 @@ df.total <- df.total %>%
          familiarity.advice = Q18.3 %>% na_if(0),
          credibility.ECB = Q3.3_1 %>% na_if(0),
          credibility.EMA = Q3.3_2 %>% na_if(0),
-         credibility.EFSA.pre = Q3.3_3 %>% na_if(0),
-         credibility.EFSA.post = Q160 %>% na_if(0),
+         credibility.EMA.pre = Q3.3_3 %>% na_if(0),
+         credibility.EMA.post = Q160 %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
          perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
@@ -202,7 +202,7 @@ df.total <- df.total %>% mutate(knowledge = case_when(
 
 #create "master" dataset
 pooled <-  df.total %>%  
-  filter(IMC=="1")
+  filter(IMC=="1" | age <18)
 
 # Add variables
 
@@ -219,7 +219,7 @@ pooled <- pooled %>% mutate(manipulation.submit.quartile = case_when(
 pooled <- pooled %>% mutate(manipulation.submit.30 = case_when(
   manipulation.submit <= 30 ~ "Under 30 secs",
   manipulation.submit > 30 ~ "30 secs or more"),
-  manipulation.submit.30 = factor(manipulation.submit,
+  manipulation.submit.30 = factor(manipulation.submit.30,
                                   levels = c("Under 30 secs",
                                              "30 secs or more")))
 
@@ -260,6 +260,8 @@ age.country <- pooled %>% group_by(country) %>%
   table() %>%
   as_tibble()
 
+
+
 age.sample.FR <- age.country %>%
   filter(country == "FR") %>% 
   mutate(percentage = n / sum(n))
@@ -277,6 +279,9 @@ age.sample.SE <- age.country %>%
   mutate(percentage = n / sum(n))
 
 # Create subsets
+pooled.experiment <- pooled %>%  
+  filter(experimental.group != "no text")
+
 check <-  pooled %>%  
   filter(manipulation.check=="1")
 

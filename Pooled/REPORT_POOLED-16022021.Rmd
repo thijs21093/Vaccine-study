@@ -1,5 +1,5 @@
 ---
-title: "Report COVID study EN V103"
+title: "Report COVID study POOLED V100"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -49,10 +49,11 @@ library(ggpmisc)
 library(tadaatoolbox)
 library(rockchalk)
 library(lme4)
+library(janitor)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/git/POOLED/.RData")
 
 set_theme(
   base=theme_blank(),
@@ -66,41 +67,76 @@ set_theme(
 
 Total number of participants:
 ```{r}
-df.total %>% nrow()
+t1 <- df.total %>%
+  group_by(country) %>% 
+  tally() %>% 
+  mutate(percentage = (n/nrow(df.total)*100) %>% round(1)) %>%
+  adorn_totals("row")
+
+t1 %>% 
+  kable(col.names = c("",
+                      "n",
+                      "%")) %>% 
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
 ```
 
 Number of participants that failed the attention test:
 ```{r}
-df.total %>% nrow() - df.total %>% filter(IMC=="1") %>% nrow()
+t2 <- df.total %>% filter(IMC != 1) %>%  
+  group_by(country) %>% 
+  tally() %>% 
+  mutate(percentage = ((n/nrow(df.total %>% filter(IMC != 1))*100) %>% round(1))) %>%
+  adorn_totals("row")
+
+t3 <- merge(x = t1, y = t2, by = "country", all.x = TRUE) %>%  mutate(n.final = (n.x-n.y) %>% round(2),
+        percentage.final = (n.final/nrow(pooled)*100) %>% round(1),
+        ratio = ((n.x-n.y)/n.x) %>% round(2)) 
+
+t3 %>% 
+  kable(col.names = c("",
+                      "n",
+                      "%",
+                      "n",
+                      "%",
+                      "n",
+                      "%",
+                      "Ratio (final/total)"
+                      ),
+        align=rep('c', 5)) %>% 
+    kable_styling(bootstrap_options = c( "condensed",  "striped", "hover"),
+                full_width = F,
+                position = "left")  %>% add_header_above(c(" ", "Total"  = 2, "Failed IMC or under 18" = 2, "Final" = 2, " "))  %>%
+   column_spec(column = 2:8, width = "2cm")
 ```
 
-Participants between 0-17:
-```{r}
-df.total %>% filter(age < 18) %>% nrow()
-```
-
-Percentage of participants who are at least 18 years old and did not fail the IMC:
-```{r}
-percent((df.def %>% nrow() / df.total %>% nrow()))
-```
-
-Number of participants in this analysis:
-```{r}
-df.def%>% nrow()
-```
 
 Number of participants in the final dataset that failed the manipulation check:
 ```{r}
-df.def %>% nrow() - df.def %>% filter(manipulation.check=="1") %>% nrow()
-```
+t4 <- pooled %>%  
+   group_by(country, manipulation.check.failed)%>%
+  summarise(n=n())%>%
+  spread(manipulation.check.failed, n) %>%
+  adorn_totals("row")  %>% mutate(
+   missing =  `<NA>`,
+   missing = replace_na(missing, 0),
+   total = (failed + passed + missing),
+  percentage = (passed/(total)*100) %>% round(2))  %>% relocate(failed, .after = passed)
 
-Which is:
-```{r}
-percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(), accuracy = 0.01)
+t4 %>% select(-`<NA>`) %>% 
+  kable(col.names = c("",
+                      "Passed",
+                      "Failed",
+                      "Missing",
+                      "Total",
+                      "% Passed")) %>% 
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
 ```
 
 <br>
-
 
 # Experiment: Perceived independence of EMA
 
@@ -109,18 +145,25 @@ percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(
 ## Randomisation check
 This table shows how many respondents are assigned to each experimental group.
 ```{r}
-df.def %>%
+pooled %>%
   group_by(experimental.group) %>%
-  tally()
+  tally() %>%
+  kable(col.names = c("Experimental group", "n")) %>%
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left") 
 ```
 
 <br>
 
 ## Description
 ```{r}
-df.def %>% 
-sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
-  kbl(digits= 2) %>%
+t5 <- pooled %>% 
+sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>% mutate(var = case_when(
+  var == "perceived.independence.reversed" ~ "Perceived indepedence"))
+
+t5 %>%
+  kbl(digits= 3) %>%
  kable_paper()
 ```
 
@@ -128,11 +171,22 @@ sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "
 
 ## Histogram
 ```{r}
-df.def %>%
+t6 <- pooled %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
-  theme_tufte()
+  geom_bar(width = 0.8, position = position_dodge()) + labs(y = "", title = "Total") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition")
+
+
+
+t7 <- pooled %>%
+  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.9, position = position_dodge()) + scale_y_continuous(name="", breaks = c(0, 100, 200)) +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + facet_wrap(~country) + theme(strip.text = element_text(hjust = 0, face = "bold"),
+    aspect.ratio = 1,
+    strip.background = element_blank(),
+    strip.placement = "outside")
+
+ggarrange(t6, t7, common.legend = TRUE, legend = "bottom")
 ```
 
 <br>
@@ -143,14 +197,14 @@ df.def %>%
 
 ### With complete dataset
 ```{r}
-tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 <br>
 
 ### With those who failed the manipulation check filtered out 
 ```{r}
-tadaa_t.test(data = df.check, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 <br>
@@ -160,7 +214,7 @@ tadaa_t.test(data = df.check, response = perceived.independence.reversed, group 
 <br>
 
 ```{r include=FALSE}
-table.duration <- df.def %>%
+table.duration <- pooled %>%
   dplyr::summarize(mean = mean(duration),
             sd = sd(duration),
             min = min(duration),
@@ -169,7 +223,7 @@ table.duration <- df.def %>%
             q3 = quantile(duration, probs = 0.75),
             max = max(duration)) %>% round(digits = 2)
 
-table.intro.submit <- df.def %>% 
+table.intro.submit <- pooled %>% 
    dplyr::summarize(mean = mean(intro.submit),
             sd = sd(intro.submit),
             min = min(intro.submit),
@@ -178,7 +232,7 @@ table.intro.submit <- df.def %>%
             q3 = quantile(intro.submit, probs = 0.75),
             max = max(intro.submit)) %>% round(digits = 2)
 
-table.manipulation.submit <- df.def %>%  
+table.manipulation.submit <- pooled %>% drop_na(manipulation.submit) %>% 
    dplyr::summarize(mean = mean(manipulation.submit),
             sd = sd(manipulation.submit),
             min = min(manipulation.submit),
@@ -187,7 +241,7 @@ table.manipulation.submit <- df.def %>%
             q3 = quantile(manipulation.submit, probs = 0.75),
             max = max(manipulation.submit)) %>% round(digits = 2)
 
-table.decision.submit <- df.def %>% 
+table.decision.submit <- pooled %>% 
    dplyr::summarize(mean = mean(decision.submit),
             sd = sd(decision.submit),
             min = min(decision.submit),
@@ -205,19 +259,12 @@ table.decision.submit <- df.def %>%
 
 ### Histogram
 ```{r}
-df.def %>% filter(duration < 30) %>% 
+pooled %>% filter(duration < 30) %>% 
 plot_frq((duration),
         geom.colors = alpha("red",0.8),
         type = "hist",
         geom.size = 0.25) +
   theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) +  scale_y_continuous(expand = expansion(c(0, 0.25))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
-```
-
-<br>
-
-### Relationship between perceived independence and total survey duration
-```{r}
-df.def %>% filter(duration < 30) %>% ggplot(aes(duration, perceived.independence.reversed, fill = experimental.group)) + geom_jitter() + geom_smooth() + scale_x_continuous("Survey duration (minutes)", limits = c(0,30)) + scale_y_continuous("Perceived indepdence", breaks = 1:7) + scale_fill_viridis_d(name = "Independence condition") + theme_light()
 ```
 
 <br>
@@ -228,7 +275,7 @@ df.def %>% filter(duration < 30) %>% ggplot(aes(duration, perceived.independence
 
 ### Page submission - introduction of case
 ```{r}
-df.def %>% filter(intro.submit < 100) %>%  
+pooled %>% filter(intro.submit < 100) %>%  
 plot_frq((intro.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
@@ -245,7 +292,7 @@ plot_frq((intro.submit),
 
 *Histogram*
 ```{r}
-df.def %>% filter(manipulation.submit < 100) %>%
+pooled %>% filter(manipulation.submit < 100) %>%
 plot_frq((manipulation.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
@@ -256,29 +303,29 @@ plot_frq((manipulation.submit),
 
 <br>
 
-*Relationship between perceived independence and time spent on the page with the manipulation*
+*Broken down in quartiles per counry and total*
 ```{r}
-df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(manipulation.submit, perceived.independence.reversed, fill = experimental.group)) + geom_jitter() + geom_smooth() + scale_x_continuous("Page submission - manipulation (seconds)", limits = c(0,60)) + scale_y_continuous("Perceived indepdence", breaks = 1:7) + scale_fill_viridis_d(name = "Independence condition") + theme_light()
+t9 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.quartile,y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "Page submission - manipulation (quartiles)", y = "Perceived independence") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position=position_dodge(0.5)) +  facet_grid(. ~ country, margins = TRUE) +  theme_tufte()
+  
+ggarrange(t9, common.legend = TRUE, legend = "bottom")
 ```
 
 <br>
 
-*Broken down in quartiles (+ group size and SE)*
+*Split dataset with 30 seconds as cut-off point*
 ```{r}
 give.n <- function(x){
-  return(c(y = mean(x)*1.1, label = length(x))) 
+  return(c(y = mean(x)*1.15, label = length(x))) 
 }
 
-ggline(df.def, x = "manipulation.submit.quartile", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation (quartiles)",  add = "mean_se", ylim = c(2, 4.5), yticks.by = 0.5) +
-  stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
-```
-
-<br>
-
-*Split dataset with 30 seconds as cut-off point (+ group size and SE)*
-```{r}
-ggline(df.def, x = "manipulation.submit.30", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "",  add = c("mean_se"), ylim = c(2, 4), yticks.by = 0.5) +
-  stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
+t10 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.30,y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.25)) + labs(color ='Experimental group', x = "Page submission - manipulation", y = "Perceived independence") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position=position_dodge(0.25)) +  facet_grid(. ~ country, margins = TRUE) +
+  stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black") + theme_tufte()
+  
+ggarrange(t10, common.legend = TRUE, legend = "bottom")
 ```
 
 ### Page submission - EMA's decision
@@ -468,13 +515,32 @@ tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = 
 
 **Age**
 ```{r}
-age.population.5 <- read.csv("AGE_POPULATION_SEGMENTS_EN_25012021.csv")
-age.total <- merge(age.population.5, age.sample, by.x = "ï..age", by.y = ".")
+age.population <- read.csv("AGE_FR-08022021.csv")
+agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
+
+
+age.population <- age.population %>% mutate(agecat = case_when(age < 25 ~ "younger than 25",
+          age >= 25 & age < 30 ~ "25-29",
+          age >= 30 & age < 35 ~ "30-34",
+          age >= 35 & age < 40 ~ "35-39",
+          age >= 40 & age < 45 ~ "40-44",
+          age >= 45 & age < 50 ~ "45-49",
+          age >= 50 & age < 55 ~ "50-54",
+          age >= 55 & age < 60 ~ "55-59",
+          age >= 60 & age < 65 ~ "60-64",
+          age >= 65 & age < 70 ~ "65-69",
+          age >= 70 & age < 75 ~ "70-74",
+          age >= 75 & age < 80 ~ "75-79",
+          age >= 80 ~ "80 or older"))
+  
+age.population.5 <- age.population %>% group_by(agecat) %>% tally(count) %>% mutate(percentage = n / sum(n))
+
+age.total <- merge(age.population.5, age.sample, by.x = "agecat", by.y = ".")
 
 age.total <- age.total %>% 
-  rename(age.category = ï..age,
-  count.population = count,
-  count.sample = n,
+  rename(age.category = agecat,
+  count.population = n.x,
+  count.sample = n.y,
   percentage.population = percentage.x,
   percentage.sample = percentage.y)
 
@@ -505,22 +571,26 @@ plot_frq(female,
 
 **Education**
 ```{r}
-education.population <- read.csv("EDUCATION_EN-25012021.csv")
+education.population <- read.csv("EDUCATION_FR-08022021.csv")
 
-education.sample <-  df.def %>% drop_na(education.recoded)  %>%  count(education.recoded) %>% 
+education.sample.eurostat <-  df.def %>% drop_na(education.recoded)  %>% filter(age <75)  %>%  count(education.recoded) %>% 
   mutate(percentage = n / sum(n))
 
-education.total <- merge(education.population, education.sample, by.x = "level", by.y = "education.recoded", all = TRUE)
+education.total.eurostat <- merge(education.population, education.sample.eurostat, by.x = "ï..education", by.y = "education.recoded", all = TRUE)
 
-education.total <- education.total %>% 
-  rename(education.category = level,
+education.total.eurostat <- education.total.eurostat %>% 
+  rename(education.category = ï..education,
   count.population = count,
   count.sample = n,
   percentage.population = percentage.x,
   percentage.sample = percentage.y)
 
-education.total %>% select(education.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'education.category', variable.name = 'series')  %>% ggplot(aes(education.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
-  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank()) + coord_flip() + scale_y_continuous(labels=scales::percent)
+my.labels.eurostat <- c('1. Less than primary,\nprimary and\nlower secondary\neducation',
+               '2. Upper secondary\nand post-secondary\nnon-tertiary education',
+         '3. Tertiary education')
+
+education.total.eurostat %>% select(education.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'education.category', variable.name = 'series')  %>% ggplot(aes(education.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent) + scale_x_discrete(labels= my.labels.eurostat)
 ```
 
 <br>
@@ -539,11 +609,11 @@ df.def %>%
 
 **Province**
 ```{r echo=FALSE}
-provinces.population <- read.csv("PROVINCE_EN-25012021.csv")
+provinces.population <- read.csv("PROVINCES_FR-08022021.csv",  encoding = "UTF-8")
 provinces.sample <-  df.def %>% drop_na(province)  %>%  count(province) %>% 
   mutate(percentage = n / sum(n))
 
-provinces.total <- merge(provinces.sample, provinces.population, by = "province")
+provinces.total <- merge(provinces.sample, provinces.population, by.y = "X.U.FEFF.province", by.x = "province")
 
 provinces.total <- provinces.total %>% 
   rename(count.population = count,
@@ -552,7 +622,7 @@ provinces.total <- provinces.total %>%
   percentage.population = percentage.y)
 
 provinces.total %>% select(province, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'province', variable.name = 'series')  %>% ggplot(aes(province, value, colour = series, fill = series)) + geom_bar (stat = "identity", width = 0.5, position = position_dodge(width = 0.9)) + 
-  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank(), axis.text.y = element_text(size = 6), aspect.ratio = 1.25/1) + coord_flip() + scale_y_continuous(labels=scales::percent)
+  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank(), axis.text.y = element_text(size = 7.5), aspect.ratio = 1.25/1) + coord_flip() + scale_y_continuous(labels=scales::percent)
 ```
 
 <br>
@@ -594,23 +664,39 @@ df.def %>%
 
 <br >
 
-## Plot
-```{r}
-df.def  %>% 
-  dplyr::select(experimental.group,
-         credibility.EMA,
-         credibility.post) %>%  drop_na() %>% 
-  gather("key","value",-experimental.group) %>% 
-  mutate(key = car::recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'")) %>%
+## Plots
 
-ggplot(aes(x=key,y=value,color=experimental.group))+
+### Total
+```{r warning=TRUE}
+table.prepost <- pooled  %>% 
+  select(experimental.group,
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         device) %>% drop_na(credibility.EMA.post) %>%
+  gather("key","value",-experimental.group, -device) %>% 
+  mutate(key = recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'"))
+  
+ggarrange(table.prepost %>% ggplot(aes(x=key,y=value,color=experimental.group))+
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
   stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
-  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group))+
-  theme_tufte()
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) +
+  theme_tufte(),
+  
+  table.prepost %>% ggplot( aes(x=key,y=value,color=experimental.group))+
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
+  stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) + facet_grid(vars(device)) +
+  theme_tufte(), common.legend = TRUE, legend	= "bottom", ncol = 2)
 ```
 
 <br >
+
+This code returns a warning. However, the resulting dataframe does not have NAs:
+```{r}
+colSums(is.na(table.prepost))
+```
+
+
 
 ## Regression
 ```{r}
@@ -625,7 +711,7 @@ t1 <- df.def %>% mutate(id = row_number()) %>%
          EMA.credibility = value) 
 
 
-tmod1 <- lmer(EMA.credibility ~ post + +(1|id),
+tmod1 <- lmer(EMA.credibility ~ post + (1|id),
                        data = t1)
 
 tmod2 <- tmod1 %>% update(.~.+experimental.group) 
@@ -640,11 +726,32 @@ tab_model(tmod2,tmod3,
           emph.p = F)
 ```
 
-## Key variables
+
+## Distribution of credibility EMA (**pre**)
+```{r}
+df.def %>%
+  ggplot(aes(x = credibility.EMA, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
+  scale_x_continuous(name="credibility EMA (pre)", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
+  theme_tufte()
+```
+
+
+## Distribution of credibility EMA (**post**)
+```{r}
+df.def %>%
+  ggplot(aes(x = credibility.post, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
+  scale_x_continuous(name="credibility EMA (post)", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
+  theme_tufte()
+```
+
+
+# Key variables
 
 <br>
 
-### Statistics
+## Statistics
 ```{r}
 df.def %>% select(benefits.vaccines, intent.vaccine:importance.NRA, knowledge) %>%
 sjmisc::descr(show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
@@ -655,7 +762,7 @@ sjmisc::descr(show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "ran
 <br>
 
 
-### Plots
+## Plots
 ```{r}
 df.def %>% select(benefits.vaccines, intent.vaccine:importance.NRA) %>%
   gather() %>% 
