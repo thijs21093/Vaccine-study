@@ -136,159 +136,6 @@ t4 %>% select(-`<NA>`) %>%
 
 <br>
 
-# Summary statistics
-```{r,results="asis", echo=FALSE,warning=FALSE,message=FALSE}
-q1 <- pooled %>% 
-  select(expertise,
-         stability,
-         noninterference,
-         credibility.index,
-         perceived.independence.reversed,
-         intent.vaccine,
-         
-         trust.EC,
-         trust.EP,
-         trust.council,
-         trust.scientist,
-         trust.politicians,
-         trust.media,
-         political.ideology,
-         EU.integration,
-         interpersonal.trust,
-         familiarity.EMA,
-         familiarity.advice,
-         credibility.EMA.pre,
-         credibility.EMA.post,
-         trust.health.authorities,
-         consequences.health,
-         consequences.economic,
-         importance.EMA,
-         importance.FDA ,
-         importance.NRA,
-         private.providers,
-         knowledge,
-         benefits.vaccines,
-         
-         independence,
-         advice,
-         no.text,
-         
-         female,
-         healthcare,
-         age) %>% 
-  descr() %>% 
-  data.frame() %>% 
-  select(-type,
-         -label,
-         -se,
-         -iqr,
-         -trimmed,) %>% 
-mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
-  mutate(var = c(
-"1. Credibility (expertise)",
-"2. Credibility (stability)",
-"3. Credibility (non-interference)",
-"4. Credibility.index",
-"5. Perceived political independence",
-"6. Vaccination intention",
-"7. Trust in European Commission",
-"8. Trust in European Parliament",
-"9. Trust in Council of European Union",
-"10. Trust in scientists",
-"11. Trust in politicians",
-"12. Trust in the media",
-"13. Political ideology (left-right)",
-"14. Support for EU integration",
-"15. Interpersonal trust",
-"16. Familiarity with EMA",
-"17. FAmiliarity with EMA's advice",
-"18. Crebility of EMA (pre-manipulation)",
-"19. Crebility of EMA (post-manipulation)",
-"20. Trust in public health authorities",
-"21. Consequences of coronacrisis for health",
-"22. Consequences of coronacrisis for income",
-"23. Importance of EMA's advice",
-"24. Importance of other regulators' advice",
-"25. Importance of NRA's advice",
-"26. Believe in private markets",
-"27. Knowledge of coronacrisis",
-"28. Benefits of vaccines",
-"29. Independence condition",
-"30. Advice condition",
-"31. No text condtion",
-"32. Gender (Female = 1)",
-"33. Works in healthcare",
-"34. Age"))
-rownames(q1) <- 1:nrow(q1)
-# check integration
-
-
-q1 %>% 
-  kable(col.names = c("Variable",
-                       "n",
-                      "% missing",
-                      "Mean",
-                      "SD",
-                      "Median",
-                      "Range",
-                      "Skew")) %>% 
-    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
-                full_width = F,
-                position = "left")
-```
-
-<br>
-
-```{r}
-pooled %>% 
-  select(expertise,
-         stability,
-         noninterference,
-         credibility.index,
-         perceived.independence.reversed,
-         intent.vaccine,
-         
-         trust.EC,
-         trust.EP,
-         trust.council,
-         trust.scientist,
-         trust.politicians,
-         trust.media,
-         political.ideology,
-         EU.integration,
-         interpersonal.trust,
-         familiarity.EMA,
-         familiarity.advice,
-         credibility.EMA.pre,
-         credibility.EMA.post,
-         trust.health.authorities,
-         consequences.health,
-         consequences.economic,
-         importance.EMA,
-         importance.FDA ,
-         importance.NRA,
-         private.providers,
-         knowledge,
-         benefits.vaccines,
-         independence,
-         advice,
-          female,
-          healthcare,
-         age) %>% 
-  tab_corr(triangle="lower",
-           remove.spaces=T,
-           p.numeric = T,
-           show.p = T,
-           fade.ns = F,
-           digits = 2,
-           na.deletion="pairwise",
-           var.labels = str_c("Variable ", c(1:30,32:34)))
-```
-
-<br>
-
-Note that I removed variable 31 from the correlation plot as it gives an error during computation.
-
 # Outcome variables
 
 In this section we provide additional details about out outcome variables -- the three aspects of policy credibility. We report the distributions and correlations of the six survey items. Thereafter, we include the R code and results of our confirmatory factor analysis.   
@@ -325,7 +172,6 @@ pooled %>%
   theme(legend.position = "none", axis.title = element_blank())
 ```
 
-<br>
 
 Item 3: I believe that the EMA's opinion was affected by the industry interests. (reversed)
 
@@ -578,6 +424,232 @@ Both models have issues. Further investigation is needed to determine the cause 
 
 <br>
 
+# Trust in EU institutions
+
+## Distribution of items 
+
+<br >
+
+Trust in the European Parliament
+
+
+```{r}
+pooled %>%
+  ggplot(aes(x=trust.EP, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Trust in the European Commission
+
+```{r}
+pooled %>%
+  ggplot(aes(x=trust.EC, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Trust in the Council of the EU
+
+```{r}
+pooled %>%
+  ggplot(aes(x=trust.council, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+## Correlation matrix
+```{r}
+pooled.trust <- pooled %>% 
+  select(trust.EP, trust.EC, trust.council)
+
+pooled.trust %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           fade.ns = T,
+           digits = 2,
+           na.deletion="pairwise",
+           title = "Correlation matrix: Trust in EU institutions",
+           var.labels = c("European Parliament", "European Commission", "Council of the EU"))
+```
+
+## Reliability indices
+```{r}
+library(psych)
+alpha.trust <- alpha(pooled.trust)[[1]]
+alpha.trust %>% select(-c(average_r, median_r, `S/N`, ase)) %>% kable(col.names = c("Raw alpha",
+                       "Standarized alpha",
+                      "Guttman's Lambda 6",
+                      "Mean of trust in EU institutions",
+                      "SD of trust in EU institutions")) %>% 
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
+# Summary statistics
+```{r,results="asis", echo=FALSE,warning=FALSE,message=FALSE}
+q1 <- pooled %>% 
+  select(expertise,
+         stability,
+         noninterference,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         
+         trust.EU.institutions,
+         trust.scientist,
+         trust.politicians,
+         trust.media,
+         political.ideology,
+         EU.integration,
+         interpersonal.trust,
+         familiarity.EMA,
+         familiarity.advice,
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         trust.health.authorities,
+         consequences.health,
+         consequences.economic,
+         importance.EMA,
+         importance.FDA ,
+         importance.NRA,
+         private.providers,
+         knowledge,
+         benefits.vaccines,
+         
+         independence,
+         advice,
+         no.text,
+         
+         female,
+         healthcare,
+         age) %>% 
+  descr() %>% 
+  data.frame() %>% 
+  select(-type,
+         -label,
+         -se,
+         -iqr,
+         -trimmed,) %>% 
+mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
+  mutate(var = c(
+"1. Credibility (expertise)",
+"2. Credibility (stability)",
+"3. Credibility (non-interference)",
+"4. Credibility.index",
+"5. Perceived political independence",
+"6. Vaccination intention",
+"7. Trust in EU institutions",
+"8. Trust in scientists",
+"9. Trust in politicians",
+"10. Trust in the media",
+"11. Political ideology (left-right)",
+"12. Support for EU integration",
+"13. Interpersonal trust",
+"14. Familiarity with EMA",
+"15. FAmiliarity with EMA's advice",
+"16. Crebility of EMA (pre-manipulation)",
+"17. Crebility of EMA (post-manipulation)",
+"18. Trust in public health authorities",
+"19. Consequences of coronacrisis for health",
+"20. Consequences of coronacrisis for income",
+"21. Importance of EMA's advice",
+"22. Importance of other regulators' advice",
+"23. Importance of NRA's advice",
+"24. Believe in private markets",
+"25. Knowledge of coronacrisis",
+"26. Benefits of vaccines",
+"27. Independence condition",
+"28. Advice condition",
+"29. No text condtion",
+"30. Gender (Female = 1)",
+"31. Works in healthcare",
+"32. Age"))
+rownames(q1) <- 1:nrow(q1)
+
+q1 %>% 
+  kable(col.names = c("Variable",
+                       "n",
+                      "% missing",
+                      "Mean",
+                      "SD",
+                      "Median",
+                      "Range",
+                      "Skew")) %>% 
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
+<br>
+
+```{r}
+pooled %>% 
+  select(expertise,
+         stability,
+         noninterference,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         
+         trust.EU.institutions,
+         trust.scientist,
+         trust.politicians,
+         trust.media,
+         political.ideology,
+         EU.integration,
+         interpersonal.trust,
+         familiarity.EMA,
+         familiarity.advice,
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         trust.health.authorities,
+         consequences.health,
+         consequences.economic,
+         importance.EMA,
+         importance.FDA ,
+         importance.NRA,
+         private.providers,
+         knowledge,
+         benefits.vaccines,
+         independence,
+         advice,
+         
+          female,
+          healthcare,
+         age) %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           show.p = T,
+           fade.ns = F,
+           digits = 2,
+           na.deletion="pairwise",
+           var.labels = str_c("Variable ", c(1:28,30:32)))
+```
+
+<br>
+
+Note that I removed variable 29 ("no text") from the correlation plot as it gives an error during computation.
+
 # Experiment: Perceived independence of EMA
 
 <br>
@@ -601,7 +673,7 @@ pooled %>%
 pooled %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
   geom_bar(width = 0.9, position = position_dodge()) + scale_y_continuous(name="") +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence group") +  scale_fill_viridis_d(name = "Independence group") + facet_grid(~country, margins = T) + theme(strip.text = element_text(hjust = 0, face = "bold"),
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence group") +  scale_fill_viridis_d(name = "Independence group") + facet_grid(~country, margins = T) + theme_tufte() + theme(strip.text = element_text(hjust = 0, face = "bold"),
     legend.position="bottom",
     aspect.ratio = 2.5)
 ```
@@ -611,9 +683,13 @@ pooled %>%
 ## T-test
 
 ```{r}
-pooled  %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
-      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "Perceived independence") +
-    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme(axis.text.x = element_blank())
+ggarrange(pooled  %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "", title = "Complete dataset") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank()),
+    
+    pooled %>% filter(manipulation.check.failed == "passed") %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "", title = "Only those who passed the manipulation check") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank()), nrow = 1, common.legend =  TRUE, legend = "bottom")
 ```
 
 <br>
@@ -813,19 +889,22 @@ ggarrange(t14, t15, t16, t17, nrow = 2, ncol = 2, labels="AUTO", legend = "botto
 
 <br>
 
-T-tests (outliers removed - i.e., cases outside 1.5 times the interquartile range):
+To check if there is a significant difference in the time indicators, I ran four t-test. Note that I removed cases that were 1.5 times outside the inter-quartile range (iqr), as these cases can be considered outliers. However, this approach is contested and other strategies may be more appropiate here. 
+
+<br > 
+
 ```{r include=FALSE}
-out.duration <- boxplot(pooled$duration, plot=FALSE)$out
-out.duration <-pooled[-which(pooled$duration %in% out.duration),]
+out.duration <- boxplot(pooled.experiment$duration, plot=FALSE)$out
+out.duration <-pooled.experiment[-which(pooled.experiment$duration %in% out.duration),]
 
-out.intro.submit <- boxplot(pooled$intro.submit, plot=FALSE)$out
-out.intro.submit <-pooled[-which(pooled$intro.submit %in% out.intro.submit),]
+out.intro.submit <- boxplot(pooled.experiment$intro.submit, plot=FALSE)$out
+out.intro.submit <-pooled.experiment[-which(pooled.experiment$intro.submit %in% out.intro.submit),]
 
-out.manipulation.submit <- boxplot(pooled$manipulation.submit, plot=FALSE)$out
-out.manipulation.submit <-pooled[-which(pooled$manipulation.submit %in% out.manipulation.submit),]
+out.manipulation.submit <- boxplot(pooled.experiment$manipulation.submit, plot=FALSE)$out
+out.manipulation.submit <-pooled.experiment[-which(pooled.experiment$manipulation.submit %in% out.manipulation.submit),]
 
-out.decision.submit <- boxplot(pooled$decision.submit, plot=FALSE)$out
-out.decision.submit <-pooled[-which(pooled$decision.submit %in% out.decision.submit),]
+out.decision.submit <- boxplot(pooled.experiment$decision.submit, plot=FALSE)$out
+out.decision.submit <-pooled[-which(pooled.experiment$decision.submit %in% out.decision.submit),]
 ```
 
 ***Survey duration***
@@ -870,28 +949,7 @@ ggarrange(t18, t19, t20, t21, nrow = 2, ncol = 2, labels="AUTO", legend = "botto
 
 <br>
 
-# Vaccination intention
-```{r}
-pooled %>%
-  ggplot(aes(intent.vaccine, group = country)) + 
-          geom_bar(aes(y = ..prop..), stat="count") + 
-          scale_y_continuous(labels=scales::percent) +
-          labs(y = "relative frequencies", x = "Vaccination intension") +
-          facet_grid(~country, margins = TRUE) + theme_light()
 
-
-```
-
-<br>
-
-## Open question
-```{r}
-pooled %>% 
-  filter(nchar(Q16.3)>1) %>% 
-  select(Q16.3) %>% 
-  kable() %>%
-  kable_styling(bootstrap_options = "striped", full_width = F) %>%    scroll_box(height = "400px")
-```
 
 <br>
 
@@ -912,27 +970,13 @@ pooled %>%
 
 ## Distribution of perceived independence for mobile/pc
 ```{r}
-t23 <- pooled %>%
-  drop_na(perceived.independence.reversed) %>% filter(device == "pc") %>% 
-  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) + labs(title = "PC") + 
-  geom_bar(width = 0.8, alpha = 1, position = position_dodge()) +
-  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + ylim(c(0,400)) +  scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
-theme(plot.title = element_text(face = "bold")) +  scale_fill_viridis_d(name = "Independence condition")
-
-t24 <- pooled %>% filter(device == "mobile") %>% 
-  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) + labs(title = "Mobile") + 
-  geom_bar(width = 0.8, alpha = 1, position = position_dodge())+
-  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + ylim(c(0,400)) + 
-  scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
-theme(plot.title = element_text(face = "bold")) +  scale_fill_viridis_d(name = "Independence condition")
-
-ggarrange(t23, t24,
-          ncol = 2,nrow = 1, common.legend = TRUE, labels = "AUTO")
+pooled %>%
+  ggplot(aes(x = perceived.independence.reversed, fill = device)) + 
+  geom_bar(width = 0.8, alpha = 1, position = position_dodge()) +  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") +  scale_fill_manual(name = "Device", values = c("dodgerblue2","dodgerblue4")) + facet_grid(~country, margins = TRUE) + theme_tufte() +  theme(legend.position="bottom")
 ```
 
 <br>
 
-### T-test
 ```{r}
 tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = device, print = "markdown")
 ```
@@ -1252,11 +1296,7 @@ plot_model(m13, type = "int")
 
 <br > 
 
-# Regression
-
-<br>
-
-## Perceived independence
+# Explaining perceived political independence
 ```{r}
 reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = pooled,
@@ -1272,7 +1312,21 @@ tab_model(reg.perceived.independence1, reg.perceived.independence2,  show.ci = F
 
 <br >
 
-## Vaccination intension
+# Explaining Vaccination intention
+
+## Distribution of variable
+```{r}
+pooled %>%
+  ggplot(aes(intent.vaccine, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "relative frequencies", x = "Vaccination intention") +
+          facet_grid(~country, margins = TRUE) + theme_light()
+
+
+```
+
+## Regression models
 ```{r}
 reg.intent.vaccine1 <- glm(intent.vaccine.recoded ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
                     data = pooled,
@@ -1299,7 +1353,12 @@ tab_model(reg.intent.vaccine1, reg.intent.vaccine2, reg.intent.vaccine3, reg.int
 
 <br>
 
-## Crebility of EMA's decision
+# Explaning crebility of EMA's decision
+
+
+## Stability
+
+### Distribution of variable
 ```{r}
 reg.credibility1 <- lm(credibility.index  ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice + political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = pooled,
@@ -1325,8 +1384,18 @@ reg.credibility4.centered <- meanCenter(reg.credibility4, centerOnlyInteractors 
 tab_model(reg.credibility1, reg.credibility2, reg.credibility3.centered, show.ci = FALSE)
 ```
 
+## Expertise
 
-_Note: Interaction variables are centered in the third model_
+### Distribution of variable
+
+## Non-interference
+
+### Distribution of variable
+
+## Crebility index
+
+### Distribution of variable
+
 
 <br>
 
@@ -1348,58 +1417,25 @@ plot_model(reg.credibility3.centered, type = "int", mdrt.values = "meansd")[[2]]
 plot_model(reg.credibility4.centered, type = "pred", terms = c("perceived.independence.reversedc", "age.recoded"))
 ```
 
-## Full models - filtered
-
-### Perceived independence
-```{r}
-reg.perceived.independence.30 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.30,
-                    na.action = na.omit)
-
-reg.perceived.independence.check <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.check,
-                    na.action = na.omit)
-
-tab_model(reg.perceived.independence.30, reg.perceived.independence.check, dv.labels = c("Perceived independence (filter = page submission)", "Perceived independence (filter = manipulation check)"), show.ci = FALSE)
-```
-
-### Vaccination intention
-```{r eval=FALSE, include=FALSE}
-reg.intent.vaccine.30 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.30,
-                    na.action = na.omit,
-                    family = binomial(link = 'logit'))
-
-reg.intent.vaccine.check  <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.check,
-                    na.action = na.omit,
-                    family = binomial(link = 'logit'))
-
-tab_model(reg.intent.vaccine.30, reg.intent.vaccine.check, dv.labels = c("Vaccination intention (filter = page submission)", "Vaccination intention (filter = manipulation check)"), show.ci = FALSE)
-```
-
-Too few cases.
-
-### Credibility index
-```{r}
-reg.credibility.30 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = df.30,
-                    na.action = na.omit)
-
-reg.credibility.check <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = df.check,
-                    na.action = na.omit)
-
-tab_model(reg.credibility.30, reg.credibility.check, dv.labels = c("Credibility (filter = page submission)",  "Credibility (filter = manipulation check)"), show.ci = FALSE)
-```
 
 <br>
 
 # Remarks from participants
+
+## General
 ```{r}
 df.total %>% 
   filter(nchar(comments.general)>1) %>% 
   select(comments.general) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%    scroll_box(height = "400px")
+```
+
+## Vaccination intention
+```{r}
+pooled %>% 
+  filter(nchar(Q16.3)>1) %>% 
+  select(Q16.3) %>% 
   kable() %>%
   kable_styling(bootstrap_options = "striped", full_width = F) %>%    scroll_box(height = "400px")
 ```
