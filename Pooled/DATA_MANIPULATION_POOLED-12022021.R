@@ -3,27 +3,27 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/DATA_EN-18022021.csv") %>%
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-18022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "IE",
          check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/DATA_FR-18022021.csv") %>%
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-18022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "FR",
          check = "no")
-raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/DATA_NL-12022021-FINAL.csv") %>%
+raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL-12022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "NL",
          check = "no")
-raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/SE/DATA_SE-12022021-FINAL.csv") %>%
+raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE-12022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "SE",
          check = "no") 
-raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/NL - control check/DATA_CONTROL_CHECK_NL-12022021-FINAL.csv") %>%
+raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_CONTROL_CHECK_NL-12022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>%
   mutate(country = "NL",
          check = "yes")
-raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/SE - control check/DATA_CONTROL_CHECK_SE-12022021-FINAL.csv") %>%
+raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_CONTROL_CHECK_SE-12022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "SE",
          check = "yes")%>%
