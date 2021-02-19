@@ -2,7 +2,7 @@ library(tidyverse)
 library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR")
-test <- read.csv("DATA_FR-15022021.csv")
+test <- read.csv("DATA_FR-18022021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 
@@ -101,7 +101,7 @@ df.total <- df.total %>%
          8='4. Other'"),
                   income = Q19.6  %>% recode("1='<20K';
                                     2='20K-25K';
-                                    2='25K-30K';
+                                    3='25K-30K';
                                     4='30K-35K';
                                     5='35K-40K';
                                     6='40K-45K';

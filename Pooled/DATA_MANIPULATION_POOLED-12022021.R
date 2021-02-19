@@ -3,11 +3,11 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/DATA_EN-15022021.csv") %>%
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/DATA_EN-18022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "IE",
          check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/DATA_FR-15022021.csv") %>%
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/DATA_FR-18022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "FR",
          check = "no")
@@ -41,12 +41,7 @@ raw.total <- bind_rows(raw.IE,
   select(-contains("Click")) # Some values are NA by default.
                             # I removed them to prevent errors.
 
-# Progress and missing data                            
-raw.total <- raw.total %>%
-  filter(Progress > 80) # 80 is an arbitrary number.
-                        # Perhaps a lower number can be selected
-                        # so that we have more data.
-
+# Missing data                            
 raw.total[is.na(raw.total)] <- 0 # Set NA to 0
 
 # Subset pc and mobile
@@ -55,13 +50,11 @@ raw.mobile <- raw.total %>%
 raw.pc<- raw.total %>%
   filter(Q3.2_1>0)
 raw.unknown <- raw.total %>%
-  filter(Q3.2_1==0 & Q2.2_1==0) # This is a safety check.
-                                # No cases are expected to satisfy this condition.
+  filter(Q3.2_1==0 & Q2.2_1==0) # "unknown" are cases that stopped before Q3.2_1==0 or Q2.2_1==0.
 
 # Add tag
 raw.pc["device"] <- "pc"
 raw.mobile["device"] <- "mobile"
-raw.unknown["device"] <- "unknown"
 
 # Recode mobile
 raw.mobile <- raw.mobile %>% 
@@ -70,6 +63,7 @@ raw.mobile <- raw.mobile %>%
          Q3.2_3 = Q2.2_3,
          Q3.2_4 = Q2.2_4,
          Q3.2_5 = Q2.2_5,
+         Q3.2_6 = Q2.2_6,
          Q3.3_1 = Q2.3_1,
          Q3.3_2 = Q2.3_2,
          Q3.3_3 = Q2.3_3) # Opinion about EU
@@ -84,7 +78,7 @@ raw.mobile <- raw.mobile %>%
          Q6.4 = Q5.10) # Pre-manipulation (Mobile)
 
 # Bind rows
-df.total <- rbind(raw.mobile, raw.pc, raw.unknown)
+df.total <- rbind(raw.mobile, raw.pc)
 
 # Manipulation variable
 df.total <- df.total %>%
@@ -92,22 +86,37 @@ df.total <- df.total %>%
   Q8.7 > 0  ~ "independence",
   Q10.7 > 0 ~ "advice",
   Q421 > 0 | Q142 > 0 ~ "no text")) %>%
-     mutate(condition = case_when(
-     experimental.group == "independence" ~ 3,
-     experimental.group == "advice" ~ 2,
-     experimental.group == "no text" ~ 1))
+     mutate(independence = case_when(
+          experimental.group == "independence" ~ 1,
+          experimental.group == "advice" ~ 0,
+          experimental.group == "no text" ~ 0),
+     advice = case_when(
+          experimental.group == "independence" ~ 0,
+          experimental.group == "advice" ~ 1,
+          experimental.group == "no text" ~ 0),
+     no.text = case_when(
+       experimental.group == "independence" ~ 0,
+       experimental.group == "advice" ~ 0,
+       experimental.group == "no text" ~ 1)) %>%
+  drop_na(experimental.group) # Note that this code drops all cases
+                              # that stopped before the question about the perceived
+                              # independence EMA.
+
+
 
 # Bind answers from manipulation 
 df.total <- df.total %>%  mutate(
-  intro.submit = Q8.3_Page.Submit + Q10.3_Page.Submit + Q138_Page.Submit + Q417_Page.Submit,
-  manipulation.submit = Q8.5_Page.Submit + Q10.5_Page.Submit,
-    manipulation.submit = na_if(manipulation.submit, 0),
-  perceived.independence = Q8.7 + Q10.7 + Q142 + Q421,
-  safety = Q8.6 + Q10.6 + Q141 + Q420)
+  intro.submit = (Q8.3_Page.Submit + Q10.3_Page.Submit + Q138_Page.Submit + Q417_Page.Submit) %>% na_if(0),
+  manipulation.submit = (Q8.5_Page.Submit + Q10.5_Page.Submit) %>% na_if(0),
+  perceived.independence = (Q8.7 + Q10.7 + Q142 + Q421) %>% na_if(0),
+  safety = (Q8.6 + Q10.6 + Q141 + Q420) %>% na_if(0))
 
 ## IMCs
-df.total <- df.total %>% 
-  mutate(IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nine|nine|negen|Negen|Neuf|neuf|nittionio|Nittionio"))==T,1,0))
+df.total <- df.total %>% mutate(Q17.1 = Q17.1 %>% na_if(0)) # Set 0 to NA
+
+df.total <-df.total %>%
+  mutate(Q17.1_7_TEXT = ifelse(is.na(Q17.1), NA_real_, Q17.1_7_TEXT),
+         IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nine|nine|negen|Negen|Neuf|neuf|nittionio|Nittionio"))==T,1,0))
 
 df.total <- df.total %>% 
   mutate(manipulation.check = case_when(
@@ -132,15 +141,16 @@ df.total <- df.total %>%
 # Demographics
 df.total <- df.total %>% 
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
-         age = Q19.2_8 + Q19.2_1 %>% na_if(0),
-         healthcare = Q19.5 %>% recode("1='yes';  2='no'"),
+         age = (Q19.2_8 + Q19.2_1) %>% na_if(0),
+         healthcare = Q19.5 %>% na_if(0) %>% recode("1=1;  2=0"),
+         healthcare.recoded = Q19.5 %>% recode("1='yes';  2='no'") %>% na_if(0),
          native.language = Q19.9 %>% na_if(0))
 
 # Outcome variables
 df.total <- df.total %>% 
   mutate(benefits.vaccines = Q6.2_2 %>% na_if(0),
          comments.general = Q20.6 %>% na_if(0),
-         intent.vaccine = Q16.2%>% na_if(0),
+         intent.vaccine = Q16.2  %>% na_if(0),
          intent.vaccine.recoded = Q16.2 %>% recode("1=0; 2=0; 3=1; 4=1"),
          credibility.item1 = Q15.2 %>% na_if(0),
          credibility.item2.reversed = Q15.3 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
@@ -148,12 +158,12 @@ df.total <- df.total %>%
          credibility.item4 = Q15.5 %>% na_if(0),
          credibility.item5 = Q15.6 %>% na_if(0),
          credibility.item6 = Q15.7 %>% na_if(0),
-         credibility.stability = Q15.7 %>% na_if(0)) 
+         stability = Q15.7 %>% na_if(0)) 
   
 # Credibility index
 df.total <- df.total %>% 
   mutate(
-    credibility.expert =
+    expertise =
       rowMeans(cbind(credibility.item4,
                      credibility.item5), na.rm=T),
     noninterference =
@@ -175,15 +185,14 @@ df.total <- df.total %>%
          trust.council = Q3.2_3 %>% na_if(0),
          trust.scientist = Q3.2_4 %>% na_if(0),
          trust.politicians = Q3.2_5 %>% na_if(0),
+         trust.media = Q3.2_6 %>% na_if(0),
          political.ideology = Q4.2 %>% na_if(0),
          EU.integration = Q4.3 %>% na_if(0),
          interpersonal.trust = Q4.4 %>% na_if(0),
          familiarity.EMA = Q18.2 %>% na_if(0),
          familiarity.advice = Q18.3 %>% na_if(0),
-         credibility.ECB = Q3.3_1 %>% na_if(0),
-         credibility.EMA = Q3.3_2 %>% na_if(0),
-         credibility.EMA.pre = Q3.3_3 %>% na_if(0),
-         credibility.EMA.post = Q160 %>% na_if(0),
+         credibility.EMA.pre = Q3.3_2 %>% na_if(0),
+         credibility.EMA.post = (Q160 + Q140 + Q86) %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
          perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
@@ -214,7 +223,7 @@ pooled <- pooled %>% mutate(manipulation.submit.quartile = case_when(
   manipulation.submit > quantile(manipulation.submit, probs = 0.5, na.rm = TRUE) &
     manipulation.submit <= quantile(manipulation.submit, probs = 0.75, na.rm = TRUE)  ~ "Q3",
   manipulation.submit > quantile(manipulation.submit, probs = 0.75, na.rm = TRUE) ~ "Q4"),
-  factor(manipulation.submit.quartile, levels = c("Q1", "Q2", "Q3", "Q4")))
+  manipulation.submit.quartile = factor(manipulation.submit.quartile, levels = c("Q1", "Q2", "Q3", "Q4")))
 
 pooled <- pooled %>% mutate(manipulation.submit.30 = case_when(
   manipulation.submit <= 30 ~ "Under 30 secs",
