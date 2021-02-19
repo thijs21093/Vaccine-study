@@ -1,6 +1,6 @@
 .Rproj.user
-.Rproj
+*.Rproj
 .Rhistory
 .RData
 .Ruserdata
-.png
+*.png
