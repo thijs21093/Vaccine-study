@@ -50,6 +50,9 @@ library(tadaatoolbox)
 library(rockchalk)
 library(lme4)
 library(janitor)
+library(sjmisc)
+library(lavaan)
+library(semPlot)
 ```
 
 ```{r}
@@ -63,35 +66,25 @@ set_theme(
   geom.label.color = "grey50")
 ```
 
+
 # Population
 
-Total number of participants:
+Total number of cases, removed cases and final cases (complete cases):
 ```{r}
-t1 <- df.total %>%
+t1 <- df.total %>% filter(Finished == 1) %>%  
   group_by(country) %>% 
   tally() %>% 
-  mutate(percentage = (n/nrow(df.total)*100) %>% round(1)) %>%
+  mutate(percentage = ((n/nrow(df.total %>% filter(Finished == 1))*100) %>% round(1))) %>%
   adorn_totals("row")
 
-t1 %>% 
-  kable(col.names = c("",
-                      "n",
-                      "%")) %>% 
-    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
-                full_width = F,
-                position = "left")
-```
-
-Number of participants that failed the attention test:
-```{r}
-t2 <- df.total %>% filter(IMC != 1) %>%  
+t2 <- df.total %>% filter(Finished == 1 & IMC != 1 | age < 18) %>%  
   group_by(country) %>% 
   tally() %>% 
-  mutate(percentage = ((n/nrow(df.total %>% filter(IMC != 1))*100) %>% round(1))) %>%
+  mutate(percentage = ((n/nrow(df.total %>% filter(Finished == 1 & IMC != 1 | age < 18))*100) %>% round(1))) %>%
   adorn_totals("row")
 
-t3 <- merge(x = t1, y = t2, by = "country", all.x = TRUE) %>%  mutate(n.final = (n.x-n.y) %>% round(2),
-        percentage.final = (n.final/nrow(pooled)*100) %>% round(1),
+t3 <- merge(x = t1, y = t2, by = "country", all.x = TRUE) %>%  mutate(n.final = (n.x-n.y),
+        percentage.final = (n.final/nrow(df.total %>% filter(Finished == 1 & IMC == 1 & age >= 18))*100) %>% round(1),
         ratio = ((n.x-n.y)/n.x) %>% round(2)) 
 
 t3 %>% 
@@ -111,18 +104,23 @@ t3 %>%
    column_spec(column = 2:8, width = "2cm")
 ```
 
+One case discrepancy??
+```{r}
+pooled %>% filter(Finished == 1) %>% nrow
+```
+
 
 Number of participants in the final dataset that failed the manipulation check:
 ```{r}
-t4 <- pooled %>%  
+t4 <- pooled %>%  filter(Finished == 1) %>%
    group_by(country, manipulation.check.failed)%>%
-  summarise(n=n())%>%
+  summarise(n=n()) %>%
   spread(manipulation.check.failed, n) %>%
   adorn_totals("row")  %>% mutate(
    missing =  `<NA>`,
-   missing = replace_na(missing, 0),
+   missing = tidyr::replace_na(missing, 0),
    total = (failed + passed + missing),
-  percentage = (passed/(total)*100) %>% round(2))  %>% relocate(failed, .after = passed)
+  percentage = (passed/(total)*100) %>% round(2)) %>% relocate(failed, .after = passed)
 
 t4 %>% select(-`<NA>`) %>% 
   kable(col.names = c("",
@@ -135,6 +133,448 @@ t4 %>% select(-`<NA>`) %>%
                 full_width = F,
                 position = "left")
 ```
+
+<br>
+
+# Summary statistics
+```{r,results="asis", echo=FALSE,warning=FALSE,message=FALSE}
+q1 <- pooled %>% 
+  select(expertise,
+         stability,
+         noninterference,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         
+         trust.EC,
+         trust.EP,
+         trust.council,
+         trust.scientist,
+         trust.politicians,
+         trust.media,
+         political.ideology,
+         EU.integration,
+         interpersonal.trust,
+         familiarity.EMA,
+         familiarity.advice,
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         trust.health.authorities,
+         consequences.health,
+         consequences.economic,
+         importance.EMA,
+         importance.FDA ,
+         importance.NRA,
+         private.providers,
+         knowledge,
+         benefits.vaccines,
+         
+         independence,
+         advice,
+         no.text,
+         
+         female,
+         healthcare,
+         age) %>% 
+  descr() %>% 
+  data.frame() %>% 
+  select(-type,
+         -label,
+         -se,
+         -iqr,
+         -trimmed,) %>% 
+mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
+  mutate(var = c(
+"1. Credibility (expertise)",
+"2. Credibility (stability)",
+"3. Credibility (non-interference)",
+"4. Credibility.index",
+"5. Perceived political independence",
+"6. Vaccination intention",
+"7. Trust in European Commission",
+"8. Trust in European Parliament",
+"9. Trust in Council of European Union",
+"10. Trust in scientists",
+"11. Trust in politicians",
+"12. Trust in the media",
+"13. Political ideology (left-right)",
+"14. Support for EU integration",
+"15. Interpersonal trust",
+"16. Familiarity with EMA",
+"17. FAmiliarity with EMA's advice",
+"18. Crebility of EMA (pre-manipulation)",
+"19. Crebility of EMA (post-manipulation)",
+"20. Trust in public health authorities",
+"21. Consequences of coronacrisis for health",
+"22. Consequences of coronacrisis for income",
+"23. Importance of EMA's advice",
+"24. Importance of other regulators' advice",
+"25. Importance of NRA's advice",
+"26. Believe in private markets",
+"27. Knowledge of coronacrisis",
+"28. Benefits of vaccines",
+"29. Independence condition",
+"30. Advice condition",
+"31. No text condtion",
+"32. Gender (Female = 1)",
+"33. Works in healthcare",
+"34. Age"))
+rownames(q1) <- 1:nrow(q1)
+# check integration
+
+
+q1 %>% 
+  kable(col.names = c("Variable",
+                       "n",
+                      "% missing",
+                      "Mean",
+                      "SD",
+                      "Median",
+                      "Range",
+                      "Skew")) %>% 
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
+<br>
+
+```{r}
+pooled %>% 
+  select(expertise,
+         stability,
+         noninterference,
+         credibility.index,
+         perceived.independence.reversed,
+         intent.vaccine,
+         
+         trust.EC,
+         trust.EP,
+         trust.council,
+         trust.scientist,
+         trust.politicians,
+         trust.media,
+         political.ideology,
+         EU.integration,
+         interpersonal.trust,
+         familiarity.EMA,
+         familiarity.advice,
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         trust.health.authorities,
+         consequences.health,
+         consequences.economic,
+         importance.EMA,
+         importance.FDA ,
+         importance.NRA,
+         private.providers,
+         knowledge,
+         benefits.vaccines,
+         independence,
+         advice,
+          female,
+          healthcare,
+         age) %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           show.p = T,
+           fade.ns = F,
+           digits = 2,
+           na.deletion="pairwise",
+           var.labels = str_c("Variable ", c(1:30,32:34)))
+```
+
+<br>
+
+Note that I removed variable 31 from the correlation plot as it gives an error during computation.
+
+# Outcome variables
+
+In this section we provide additional details about out outcome variables -- the three aspects of policy credibility. We report the distributions and correlations of the six survey items. Thereafter, we include the R code and results of our confirmatory factor analysis.   
+
+
+## Distributions of items
+
+Item 1: I believe that the EMA's opinion was based strictly on scientific considerations. 
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item1, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Item 2: I believe that the EMA's opinion was influenced by political interests. (reversed)
+
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item2.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Item 3: I believe that the EMA's opinion was affected by the industry interests. (reversed)
+
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item3.reversed, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Item 4: I believe that the EMA's opinion was formed after evaluating all the relevant data and evidence. 
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item4, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Item 5: I believe that the assessment of the evidence was based on adequate methods. 
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item5, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+Item 6: Assuming that the scientific evidence does not change, I believe that EMA's opinion about the Pfizer-BioNTech vaccine will not change the next time EMA is asked to re-examine it.
+
+```{r}
+pooled %>%
+  ggplot(aes(x=credibility.item6, fill = experimental.group)) +
+  geom_bar(width = 0.75,alpha=0.8)+
+  scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
+  scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
+  facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
+  theme_tufte() +
+  theme(legend.position = "none", axis.title = element_blank())
+```
+
+<br>
+
+**Correlation matrix**
+
+```{r}
+pooled.credibility <-pooled %>% 
+  select(credibility.item1:credibility.item6)
+
+pooled.credibility %>% 
+  tab_corr(triangle="lower",
+           remove.spaces=T,
+           p.numeric = T,
+           fade.ns = T,
+           digits = 2,
+           na.deletion="pairwise",
+           title = "Correlation matrix: items of policy credibility scale",
+           var.labels = str_c("Item ",1:6))
+```
+
+<br>
+
+```{r include=FALSE}
+factor.1.cfa <- 'policy.credibility  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed + credibility.item4 + credibility.item5 + credibility.item6'
+
+factor.3.cfa <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
+expert.based =~ credibility.item4 + credibility.item5
+stability   =~ credibility.item6'
+
+factor.3.cfa.alt <- 'non.interference.alt  =~  credibility.item2.reversed + credibility.item3.reversed
+              expert.based.alt =~ credibility.item1 + credibility.item4 + credibility.item5
+              stability.alt   =~ credibility.item6'
+
+factor.3.cfa.second <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
+              expert.based =~ credibility.item4 + credibility.item5
+              stability   =~ credibility.item6
+      policy.credibility =~ non.interference + expert.based + stability
+non.interference ~~ expert.based
+expert.based ~~ stability'
+
+factor.3.cfa.alt.second <- 'non.interference.alt  =~  credibility.item2.reversed + credibility.item3.reversed
+              expert.based.alt =~ credibility.item1 + credibility.item4 + credibility.item5
+              stability.alt   =~ credibility.item6
+      policy.credibility.alt =~ non.interference.alt + expert.based.alt + stability.alt
+non.interference.alt ~~ expert.based.alt
+expert.based.alt ~~ stability.alt'
+```
+
+
+# Conformitory factor analysis
+
+We conducted our confirmatory factor analysis using `R lavaan` package.
+
+<br>
+
+**One-factor model:**
+```{r,echo = TRUE}
+fit.1factor <- cfa(factor.1.cfa, 
+           std.lv=TRUE,  
+           missing="fiml",  
+           data=pooled.credibility)
+
+summary(fit.1factor,fit.measures=T,standardize=T)
+```
+
+<br>
+
+**Three-factors model:**
+```{r,echo = TRUE}
+fit.3factors <- cfa(factor.3.cfa, 
+           std.lv=TRUE,  
+           missing="fiml",  
+           data=pooled.credibility)
+
+summary(fit.3factors,fit.measures=T,standardize=T)
+```
+
+<br>
+
+**Three-factors model alternative:**
+
+<br>
+
+In this model, item 1 is part of 'expertise-based' instead of 'non-interference'.
+
+<br>
+
+```{r,echo = TRUE}
+fit.3factors.alt <- cfa(factor.3.cfa.alt, 
+           std.lv=TRUE,  
+           missing="fiml",  
+           data=pooled.credibility)
+
+summary(fit.3factors.alt, fit.measures=T, standardize=T)
+```
+
+## A closer look
+
+### Three factors (original dimensions)
+
+<br>
+
+**comparison with one-factor model**
+```{r,echo = TRUE}
+anova(fit.3factors, fit.1factor)
+```
+
+**Visualization of the model**
+```{r}
+semPaths(fit.3factors, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```
+
+**Factor loading**
+```{r}
+parameterEstimates(fit.3factors, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
+  mutate(Indicator = str_c("Item ",1:6)) %>% 
+  kable(digits = 3)%>% 
+    kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left")%>%
+  collapse_rows(columns = 1, valign = "top")
+```
+<br>
+
+### Three factors (alternative)
+
+**comparison with one-factor model**
+```{r,echo = TRUE}
+anova(fit.3factors.alt, fit.1factor)
+```
+
+**Visualization of the model**
+```{r}
+semPaths(fit.3factors.alt, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```
+
+**Factor loading**
+```{r}
+parameterEstimates(fit.3factors.alt, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
+  mutate(Indicator = str_c("Item ",1:6)) %>% 
+  kable(digits = 3)%>% 
+    kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left")%>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+## How does it look if we include a second order latent variable?
+
+**Three-factors model with second order:**
+```{r message=TRUE, warning=TRUE, include=FALSE}
+fit.3factors.second <- cfa(factor.3.cfa.second, 
+           data=pooled.credibility)
+
+summary(fit.3factors.second, standardize=T)
+```
+**Visualization of the model**
+```{r message=TRUE, warning=TRUE, paged.print=FALSE}
+semPaths(fit.3factors.second, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```
+
+<br >
+
+**Three-factors model alternative with second order:**
+
+<br>
+
+```{r message=TRUE, warning=TRUE, include=FALSE}
+fit.3factors.alt.second <- cfa(factor.3.cfa.alt.second, 
+           data=pooled.credibility,
+           missing="fiml")
+
+summary(fit.3factors.alt.second, fit.measures=T, standardize=T)
+```
+
+
+**Visualization of the model**
+```{r}
+semPaths(fit.3factors.alt.second, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```
+
+Both models have issues. Further investigation is needed to determine the cause of this problem. Theoretically, it would make sense to add a second order as we expect the three dimensions to be related. That is, we see these dimensions as part of a bigger latent variable ("policy credibility").
 
 <br>
 
@@ -156,58 +596,43 @@ pooled %>%
 
 <br>
 
-## Description
-```{r}
-t5 <- pooled %>% 
-sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>% mutate(var = case_when(
-  var == "perceived.independence.reversed" ~ "Perceived indepedence"))
-
-t5 %>%
-  kbl(digits= 3) %>%
- kable_paper()
-```
-
-<br>
-
 ## Histogram
 ```{r}
-t6 <- pooled %>%
+pooled %>%
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
-  geom_bar(width = 0.8, position = position_dodge()) + labs(y = "", title = "Total") +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition")
-
-
-
-t7 <- pooled %>%
-  ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) +
-  geom_bar(width = 0.9, position = position_dodge()) + scale_y_continuous(name="", breaks = c(0, 100, 200)) +
-  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + facet_wrap(~country) + theme(strip.text = element_text(hjust = 0, face = "bold"),
-    aspect.ratio = 1,
-    strip.background = element_blank(),
-    strip.placement = "outside")
-
-ggarrange(t6, t7, common.legend = TRUE, legend = "bottom")
+  geom_bar(width = 0.9, position = position_dodge()) + scale_y_continuous(name="") +
+  scale_x_continuous(name="", breaks = 1:7) + scale_fill_manual(name = "Independence group") +  scale_fill_viridis_d(name = "Independence group") + facet_grid(~country, margins = T) + theme(strip.text = element_text(hjust = 0, face = "bold"),
+    legend.position="bottom",
+    aspect.ratio = 2.5)
 ```
 
 <br>
 
 ## T-test
 
+```{r}
+pooled  %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "Perceived independence") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme(axis.text.x = element_blank())
+```
+
 <br>
 
-### With complete dataset
+### With complete dataset (only advice/independence)
 ```{r}
 tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 <br>
 
-### With those who failed the manipulation check filtered out 
+### With those who failed the manipulation check filtered out (only advice/independence)
 ```{r}
 tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
 <br>
+
+### Anova?
 
 # Time
 
@@ -330,7 +755,7 @@ ggarrange(t10, common.legend = TRUE, legend = "bottom")
 
 ### Page submission - EMA's decision
 ```{r}
-df.def %>% filter(decision.submit < 100) %>% 
+pooled %>% filter(decision.submit < 100) %>% 
 plot_frq((decision.submit),
         geom.colors = alpha("dodgerblue2",0.8),
         type = "hist",
@@ -348,19 +773,22 @@ plot_frq((decision.submit),
 ***...Failing the manipulation check***
 
 ```{r}
-p1 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+t10 <- pooled.experiment %>% filter(duration < 30) %>% drop_na(manipulation.check.failed) %>%
+  ggplot(aes(x= duration, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p2  <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+t11  <- pooled.experiment %>% filter(intro.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x= intro.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p3 <- df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+t12 <- pooled.experiment %>% filter(manipulation.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x=manipulation.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p4 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color =manipulation.check.failed, fill = manipulation.check.failed)) + 
+t13 <- pooled.experiment %>% filter(decision.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x=decision.submit, color =manipulation.check.failed, fill = manipulation.check.failed)) + 
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p1, p2, p3, p4, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+ggarrange(t10, t11, t12, t13, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+
+# Change legend title
 ```
 
 <br>
@@ -368,36 +796,36 @@ ggarrange(p1, p2, p3, p4, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", 
 ***...experimental groups***
 
 ```{r}
-p5 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+t14 <- pooled.experiment %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p6  <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+t15  <- pooled.experiment %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p7 <- df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+t16 <- pooled.experiment %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = experimental.group, fill = experimental.group)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p8 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
+t17 <- pooled.experiment %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p5, p6, p7, p8, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+ggarrange(t14, t15, t16, t17, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
 
 <br>
 
 T-tests (outliers removed - i.e., cases outside 1.5 times the interquartile range):
 ```{r include=FALSE}
-out.duration <- boxplot(df.def$duration, plot=FALSE)$out
-out.duration <-df.def[-which(df.def$duration %in% out.duration),]
+out.duration <- boxplot(pooled$duration, plot=FALSE)$out
+out.duration <-pooled[-which(pooled$duration %in% out.duration),]
 
-out.intro.submit <- boxplot(df.def$intro.submit, plot=FALSE)$out
-out.intro.submit <-df.def[-which(df.def$intro.submit %in% out.intro.submit),]
+out.intro.submit <- boxplot(pooled$intro.submit, plot=FALSE)$out
+out.intro.submit <-pooled[-which(pooled$intro.submit %in% out.intro.submit),]
 
-out.manipulation.submit <- boxplot(df.def$manipulation.submit, plot=FALSE)$out
-out.manipulation.submit <-df.def[-which(df.def$manipulation.submit %in% out.manipulation.submit),]
+out.manipulation.submit <- boxplot(pooled$manipulation.submit, plot=FALSE)$out
+out.manipulation.submit <-pooled[-which(pooled$manipulation.submit %in% out.manipulation.submit),]
 
-out.decision.submit <- boxplot(df.def$decision.submit, plot=FALSE)$out
-out.decision.submit <-df.def[-which(df.def$decision.submit %in% out.decision.submit),]
+out.decision.submit <- boxplot(pooled$decision.submit, plot=FALSE)$out
+out.decision.submit <-pooled[-which(pooled$decision.submit %in% out.decision.submit),]
 ```
 
 ***Survey duration***
@@ -425,37 +853,40 @@ tadaa_t.test(data = out.decision.submit, response = decision.submit, group = exp
 ***...interface (pc/mobile)***
 
 ```{r}
-p9 <- df.def %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+t18 <- pooled %>% filter(duration < 30) %>% ggplot(aes(x= duration, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p10 <- df.def %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+t19 <- pooled %>% filter(intro.submit < 60) %>% ggplot(aes(x= intro.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p11 <- df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+t20 <- pooled %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation.submit, color = device, fill = device)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-p12 <- df.def %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = device, fill = device)) +
+t21 <- pooled %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = device, fill = device)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-ggarrange(p9, p10, p11, p12, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
+ggarrange(t18, t19, t20, t21, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
 
 <br>
 
 # Vaccination intention
 ```{r}
-df.def %>%
-plot_frq(intent.vaccine,
-        title = "Vaccination intention") + 
-  theme_blank() +
-  theme(axis.title  = element_blank())
+pooled %>%
+  ggplot(aes(intent.vaccine, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "relative frequencies", x = "Vaccination intension") +
+          facet_grid(~country, margins = TRUE) + theme_light()
+
+
 ```
 
 <br>
 
 ## Open question
 ```{r}
-df.def %>% 
+pooled %>% 
   filter(nchar(Q16.3)>1) %>% 
   select(Q16.3) %>% 
   kable() %>%
@@ -470,9 +901,9 @@ df.def %>%
 
 ## Distribution
 ```{r}
-df.def %>%
+pooled %>%
   plot_frq(device,
-        ylim = c(0,nrow(df.def)),
+        ylim = c(0,nrow(pooled)),
         geom.colors = alpha("dodgerblue1",0.8))+
   theme_blank()
 ```
@@ -481,20 +912,21 @@ df.def %>%
 
 ## Distribution of perceived independence for mobile/pc
 ```{r}
-p13 <- df.def %>%
+t23 <- pooled %>%
   drop_na(perceived.independence.reversed) %>% filter(device == "pc") %>% 
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) + labs(title = "PC") + 
   geom_bar(width = 0.8, alpha = 1, position = position_dodge()) +
-  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
+  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + ylim(c(0,400)) +  scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
 theme(plot.title = element_text(face = "bold")) +  scale_fill_viridis_d(name = "Independence condition")
 
-p14 <- df.def %>% filter(device == "mobile") %>% 
+t24 <- pooled %>% filter(device == "mobile") %>% 
   ggplot(aes(x = perceived.independence.reversed, fill = experimental.group)) + labs(title = "Mobile") + 
   geom_bar(width = 0.8, alpha = 1, position = position_dodge())+
-  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
+  scale_x_continuous(name="Perceived independence", breaks = 1:7) + scale_y_continuous(name="") + ylim(c(0,400)) + 
+  scale_fill_manual(name = "Independence condition", values = c("dodgerblue2","dodgerblue4")) +
 theme(plot.title = element_text(face = "bold")) +  scale_fill_viridis_d(name = "Independence condition")
 
-ggarrange(p13, p14,
+ggarrange(t23, t24,
           ncol = 2,nrow = 1, common.legend = TRUE, labels = "AUTO")
 ```
 
@@ -502,24 +934,20 @@ ggarrange(p13, p14,
 
 ### T-test
 ```{r}
-tadaa_t.test(data = df.def, response = perceived.independence.reversed, group = device, print = "markdown")
+tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = device, print = "markdown")
 ```
 
 <br>
 
-# Descriptive statistics
+# Demography
 
-<br>
+## Age {.tabset}
 
-## Demography
-
-**Age**
+### France
 ```{r}
-age.population <- read.csv("AGE_FR-08022021.csv")
-agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
+age.population.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/FR/AGE_FR-08022021.csv")
 
-
-age.population <- age.population %>% mutate(agecat = case_when(age < 25 ~ "younger than 25",
+age.population.FR <- age.population.FR %>% mutate(agecat = case_when(age < 25 ~ "younger than 25",
           age >= 25 & age < 30 ~ "25-29",
           age >= 30 & age < 35 ~ "30-34",
           age >= 35 & age < 40 ~ "35-39",
@@ -533,35 +961,108 @@ age.population <- age.population %>% mutate(agecat = case_when(age < 25 ~ "young
           age >= 75 & age < 80 ~ "75-79",
           age >= 80 ~ "80 or older"))
   
-age.population.5 <- age.population %>% group_by(agecat) %>% tally(count) %>% mutate(percentage = n / sum(n))
+age.population.5.FR <- age.population.FR %>% group_by(agecat) %>% tally(count) %>% mutate(percentage = n / sum(n))
 
-age.total <- merge(age.population.5, age.sample, by.x = "agecat", by.y = ".")
+age.total.FR <- merge(age.population.5.FR, age.sample.FR, by.x = "agecat", by.y = "age.5")
 
-age.total <- age.total %>% 
+age.total.FR <- age.total.FR %>% 
   rename(age.category = agecat,
   count.population = n.x,
   count.sample = n.y,
   percentage.population = percentage.x,
   percentage.sample = percentage.y)
 
-age.total$age.category <- factor(age.total$age.category, levels = c(
+age.total.FR$age.category <- factor(age.total.FR$age.category, levels = c(
 "younger than 25",
 "25-29",           "30-34",           "35-39",          
 "40-44",           "45-49",           "50-54",          
 "55-59",           "60-64",           "65-69",          
 "70-74",           "75-79",           "80 or older"))    
 
-age.total %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+age.total.FR %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
   theme_blank() + theme(legend.position="top", axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent)
 ```
 
 <br>
 
-**Gender**
+### Netherlands
 ```{r}
-df.def %>% 
+age.population.5.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
+
+age.total.NL <- merge(age.population.5.NL, age.sample.NL, by.x = "ï..age", by.y = "age.5")
+
+age.total.NL <- age.total.NL %>% 
+  rename(age.category = ï..age,
+  count.population = count,
+  count.sample = n,
+  percentage.population = percentage.x,
+  percentage.sample = percentage.y)
+
+age.total.NL$age.category <- factor(age.total.NL$age.category, levels = c(
+"younger than 25",
+"25-29",           "30-34",           "35-39",          
+"40-44",           "45-49",           "50-54",          
+"55-59",           "60-64",           "65-69",          
+"70-74",           "75-79",           "80 or older"))    
+
+age.total.NL %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+  theme_blank() + theme(legend.position="top", axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent)
+```
+
+### Ireland
+```{r}
+
+age.population.5.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN/AGE_POPULATION_SEGMENTS_EN_25012021.csv")
+
+age.total.IE <- merge(age.population.5.IE, age.sample.IE, by.x = "ï..age", by.y = "age.5")
+
+age.total.IE  <- age.total.IE  %>% 
+  rename(age.category = ï..age,
+  count.population = count,
+  count.sample = n,
+  percentage.population = percentage.x,
+  percentage.sample = percentage.y)
+
+age.total.IE$age.category <- factor(age.total.IE$age.category, levels = c(
+"younger than 25",
+"25-29",           "30-34",           "35-39",          
+"40-44",           "45-49",           "50-54",          
+"55-59",           "60-64",           "65-69",          
+"70-74",           "75-79",           "80 or older"))    
+
+age.total.IE  %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+  theme_blank() + theme(legend.position="top", axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent)
+```
+
+### Sweden
+```{r}
+age.population.5.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/SE/AGE_POPULATION_SEGMENTS_SE-22012021.csv")
+age.total.SE <- merge(age.population.5.SE, age.sample.SE, by.x = "age", by.y = "age.5")
+
+age.total.SE <- age.total.SE %>% 
+  rename(age.category = age,
+  count.population = count,
+  count.sample = n,
+  percentage.population = percentage.x,
+  percentage.sample = percentage.y)
+
+age.total.SE$age.category <- factor(age.total.SE$age.category, levels = c(
+"younger than 25",
+"25-29",           "30-34",           "35-39",          
+"40-44",           "45-49",           "50-54",          
+"55-59",           "60-64",           "65-69",          
+"70-74",           "75-79",           "80 or older"))    
+
+age.total.SE %>% select(age.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'age.category', variable.name = 'series')  %>% ggplot(aes(age.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
+  theme_blank() + theme(legend.position="top", axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent)
+```
+
+
+## Gender
+```{r}
+pooled %>% 
 plot_frq(female,
-                ylim = c(0,nrow(df.def)),
+                ylim = c(0,nrow(pooled)),
         axis.labels = c("Male","Female"),
         title = "Gender")+ 
   theme_blank()
@@ -569,69 +1070,24 @@ plot_frq(female,
 
 <br>
 
-**Education**
-```{r}
-education.population <- read.csv("EDUCATION_FR-08022021.csv")
+## Education
 
-education.sample.eurostat <-  df.def %>% drop_na(education.recoded)  %>% filter(age <75)  %>%  count(education.recoded) %>% 
-  mutate(percentage = n / sum(n))
 
-education.total.eurostat <- merge(education.population, education.sample.eurostat, by.x = "ï..education", by.y = "education.recoded", all = TRUE)
 
-education.total.eurostat <- education.total.eurostat %>% 
-  rename(education.category = ï..education,
-  count.population = count,
-  count.sample = n,
-  percentage.population = percentage.x,
-  percentage.sample = percentage.y)
+## Income
 
-my.labels.eurostat <- c('1. Less than primary,\nprimary and\nlower secondary\neducation',
-               '2. Upper secondary\nand post-secondary\nnon-tertiary education',
-         '3. Tertiary education')
-
-education.total.eurostat %>% select(education.category, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'education.category', variable.name = 'series')  %>% ggplot(aes(education.category, value, colour = series, fill = series)) + geom_bar (stat="identity", width=0.9, position = position_dodge(width=0.9)) + 
-  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank()) + scale_y_continuous(labels=scales::percent) + scale_x_discrete(labels= my.labels.eurostat)
-```
 
 <br>
 
-**Income**
-```{r}
-df.def %>% 
-  filter(income!=0) %>% 
-  plot_frq(income,
-        ylim = c(0,nrow(df.def)/2.5),
-        title = "Participant income level") + 
-  theme_blank() + theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title  = element_blank())
-```
+## Province
 
 <br>
 
-**Province**
-```{r echo=FALSE}
-provinces.population <- read.csv("PROVINCES_FR-08022021.csv",  encoding = "UTF-8")
-provinces.sample <-  df.def %>% drop_na(province)  %>%  count(province) %>% 
-  mutate(percentage = n / sum(n))
-
-provinces.total <- merge(provinces.sample, provinces.population, by.y = "X.U.FEFF.province", by.x = "province")
-
-provinces.total <- provinces.total %>% 
-  rename(count.population = count,
-  count.sample = n,
-  percentage.sample = percentage.x,
-  percentage.population = percentage.y)
-
-provinces.total %>% select(province, percentage.population, percentage.sample) %>% reshape2::melt(id.vars = 'province', variable.name = 'series')  %>% ggplot(aes(province, value, colour = series, fill = series)) + geom_bar (stat = "identity", width = 0.5, position = position_dodge(width = 0.9)) + 
-  theme_blank() + theme(legend.position="bottom", axis.title  = element_blank(), axis.text.y = element_text(size = 7.5), aspect.ratio = 1.25/1) + coord_flip() + scale_y_continuous(labels=scales::percent)
-```
-
-<br>
-
-**Works in healthcare sector**
+## Works in healthcare sector
 ```{r}
-df.def %>% 
+pooled %>% 
   plot_frq(healthcare,
-        ylim = c(0,nrow(df.def)),
+        ylim = c(0,nrow(pooled)+500),
         title = "") + 
   theme_blank()
 ```
@@ -640,153 +1096,161 @@ df.def %>%
 
 # Pre-post
 
-
-## Correlation matrix
+## Distribution of credibility EMA (post)
 ```{r}
-df.def %>% 
-  select(credibility.EMA,
-         credibility.post,
-         credibility.expert,
-         credibility.noninterference,
-         credibility.stability,
-         credibility.index,
-         perceived.independence.reversed,
-         intent.vaccine,
-         ) %>% 
-  tab_corr(triangle="lower",
-           remove.spaces=T,
-           p.numeric = T,
-           fade.ns = T,
-           digits = 2,
-           na.deletion="pairwise",
-           title = "Correlation matrix")
+pooled %>% count(credibility.EMA.post) %>%  mutate(percentage = (n/(sum(n))*100) %>% round(2))  %>%
+  adorn_totals("row") %>%  kable(col.names = c("Credibility EMA (post)", "n", "%")) %>% 
+
+    kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
+                full_width = F,
+                position = "left")
 ```
 
 <br >
 
-## Plots
+As this variable was added later to the survey, there is substantial missing data for this variable.
 
-### Total
+<br >
+
+## Plot
 ```{r warning=TRUE}
-table.prepost <- pooled  %>% 
+t26 <- pooled  %>% 
   select(experimental.group,
          credibility.EMA.pre,
          credibility.EMA.post,
-         device) %>% drop_na(credibility.EMA.post) %>%
-  gather("key","value",-experimental.group, -device) %>% 
-  mutate(key = recode(key,"'credibility.EMA'='0.Pre';'credibility.post'='1.Post'"))
+         country) %>% drop_na(credibility.EMA.post) %>%
+  gather("key","value",-experimental.group, -country) %>% 
+  mutate(key = recode(key,"'credibility.EMA.pre'='0.Pre';'credibility.EMA.post'='1.Post'"))
   
-ggarrange(table.prepost %>% ggplot(aes(x=key,y=value,color=experimental.group))+
+t26 %>% ggplot(aes(x=key,y=value,color=experimental.group))+
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
   stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
-  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) +
-  theme_tufte(),
-  
-  table.prepost %>% ggplot( aes(x=key,y=value,color=experimental.group))+
-      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha=0.5,width=0.1,size=1,position=position_dodge(0.5)) + 
-  stat_summary(fun = mean, geom = "point", alpha=0.5,size=2,position=position_dodge(0.5))+
-  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) + facet_grid(vars(device)) +
-  theme_tufte(), common.legend = TRUE, legend	= "bottom", ncol = 2)
+  stat_summary(fun = mean, geom = "line", alpha=0.5,size=1,position=position_dodge(0.5), aes(group = experimental.group)) + labs(color ='Experimental group', x = "", y = "") + facet_grid(~country, margins = TRUE) +
+  theme_tufte()
 ```
 
 <br >
 
-This code returns a warning. However, the resulting dataframe does not have NAs:
+## Regression {.tabset}
+
+### Total
+
+**Models**
 ```{r}
-colSums(is.na(table.prepost))
-```
-
-
-
-## Regression
-```{r}
-t1 <- df.def %>% mutate(id = row_number()) %>% 
+prepost.total <- pooled %>% mutate(id = row_number()) %>% 
   select(experimental.group,
          id,
-         credibility.EMA,
-         credibility.post) %>%
+         credibility.EMA.pre,
+         credibility.EMA.post,
+         country) %>%
   drop_na() %>%
-  gather("key","value",-experimental.group,-id) %>% 
-  mutate(post = key %>% Recode("'credibility.EMA'= 0;'credibility.post'=1"),
-         EMA.credibility = value) 
+  gather("key","value",-experimental.group,-id,-country) %>% 
+  mutate(post = key %>% Recode("'credibility.EMA.pre'= 0;'credibility.EMA.post'=1"),
+         credibility = value) 
 
 
-tmod1 <- lmer(EMA.credibility ~ post + (1|id),
-                       data = t1)
+m1 <- lmer(credibility ~ post + (1|id),
+                       data = prepost.total)
 
-tmod2 <- tmod1 %>% update(.~.+experimental.group) 
+m2 <- m1 %>% update(.~.+experimental.group) 
 
 
-tmod3 <- tmod2 %>% update(.~. + post*experimental.group)
+m3 <- m2 %>% update(.~. + post*experimental.group)
 
-tab_model(tmod2,tmod3,
+
+tab_model(m2, m3,
           show.ci = F,
           show.se = T,
           collapse.se = T,
           emph.p = F)
 ```
 
+<br >
 
-## Distribution of credibility EMA (**pre**)
+**Interaction effect**
 ```{r}
-df.def %>%
-  ggplot(aes(x = credibility.EMA, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
-  scale_x_continuous(name="credibility EMA (pre)", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
-  theme_tufte()
+plot_model(m3, type = "int")
 ```
 
+### Ireland
 
-## Distribution of credibility EMA (**post**)
+**Models**
 ```{r}
-df.def %>%
-  ggplot(aes(x = credibility.post, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha = 0.8, position = position_dodge()) +
-  scale_x_continuous(name="credibility EMA (post)", breaks = 1:7) + scale_fill_manual(name = "Independence condition") +  scale_fill_viridis_d(name = "Independence condition") + 
-  theme_tufte()
+prepost.IE <- prepost.total %>% filter(country == "IE")
+
+m5 <- lmer(credibility ~ post + (1|id), data = prepost.IE)
+
+m6 <- m5 %>% update(.~.+experimental.group) 
+
+m7 <- m6 %>% update(.~. + post*experimental.group)
+
+tab_model(m6, m7,
+          show.ci = F,
+          show.se = T,
+          collapse.se = T,
+          emph.p = F)
 ```
 
+<br > 
 
-# Key variables
-
-<br>
-
-## Statistics
+**Interaction effect**
 ```{r}
-df.def %>% select(benefits.vaccines, intent.vaccine:importance.NRA, knowledge) %>%
-sjmisc::descr(show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
-  kbl(digits= 2) %>%
- kable_paper()
+plot_model(m7, type = "int")
 ```
 
-<br>
-
-
-## Plots
+### Sweden
 ```{r}
-df.def %>% select(benefits.vaccines, intent.vaccine:importance.NRA) %>%
-  gather() %>% 
-  ggplot(aes(value)) +
-    facet_wrap(~ key, scales = "free") +
-    geom_histogram(boundary = 0.1, binwidth = 0.5) + 
-  theme(text = element_text(face = "bold",  size = 6), axis.text.y = element_text(size = 5))
+prepost.SE <- prepost.total %>% filter(country == "SE")
+
+m8 <- lmer(credibility ~ post + (1|id),
+                       data = prepost.SE)
+
+m9 <- m8 %>% update(.~.+ experimental.group) 
+
+m10 <- m9 %>% update(.~. + post*experimental.group)
+
+tab_model(m9, m10,
+          show.ci = F,
+          show.se = T,
+          collapse.se = T,
+          emph.p = F)
 ```
 
+<br > 
 
-# Correlation matrix
+**Interaction effect**
 ```{r}
-df.def %>% 
-  select(trust.EC:trust.politicians, trust.health.authorities, benefits.vaccines, credibility.index, credibility.EMA, familiarity.EMA, familiarity.advice, consequences.economic, consequences.health, age, perceived.independence.reversed, political.ideology, EU.integration, knowledge, interpersonal.trust, treatment, private.providers) %>% 
-  tab_corr(triangle="lower",
-           remove.spaces=T,
-           p.numeric = T,
-           fade.ns = T,
-           digits = 2,
-           na.deletion="pairwise",
-           title = "Correlation matrix")
+plot_model(m10, type = "int")
 ```
 
-<br>
+### France
+
+**Models**
+```{r}
+prepost.FR <- prepost.total %>% filter(country == "FR")
+
+m11 <- lmer(credibility ~ post + (1|id),
+                       data = prepost.FR)
+
+m12 <- m11 %>% update(.~.+ experimental.group) 
+
+m13 <- m12 %>% update(.~. + post*experimental.group)
+
+tab_model(m12, m13,
+          show.ci = F,
+          show.se = T,
+          collapse.se = T,
+          emph.p = F)
+```
+
+<br > 
+
+**Interaction effect**
+```{r}
+plot_model(m13, type = "int")
+```
+
+<br > 
 
 # Regression
 
@@ -794,12 +1258,12 @@ df.def %>%
 
 ## Perceived independence
 ```{r}
-reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.def,
+reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+                    data = pooled,
                     na.action = na.omit)
 
-reg.perceived.independence2 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.def,
+reg.perceived.independence2 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+                    data = pooled,
                     na.action = na.omit)
 
 
@@ -810,23 +1274,23 @@ tab_model(reg.perceived.independence1, reg.perceived.independence2,  show.ci = F
 
 ## Vaccination intension
 ```{r}
-reg.intent.vaccine1 <- glm(intent.vaccine.recoded ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.def,
+reg.intent.vaccine1 <- glm(intent.vaccine.recoded ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+                    data = pooled,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
-reg.intent.vaccine2 <- glm(intent.vaccine.recoded ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.def,
+reg.intent.vaccine2 <- glm(intent.vaccine.recoded ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+                    data = pooled,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
-reg.intent.vaccine3 <- glm(intent.vaccine.recoded ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.def,
+reg.intent.vaccine3 <- glm(intent.vaccine.recoded ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+                    data = pooled,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
-reg.intent.vaccine4 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = df.def,
+reg.intent.vaccine4 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+                    data = pooled,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
@@ -837,20 +1301,20 @@ tab_model(reg.intent.vaccine1, reg.intent.vaccine2, reg.intent.vaccine3, reg.int
 
 ## Crebility of EMA's decision
 ```{r}
-reg.credibility1 <- lm(credibility.index  ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice + political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.def,
+reg.credibility1 <- lm(credibility.index  ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice + political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+                    data = pooled,
                     na.action = na.omit)
 
-reg.credibility2 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.def,
+reg.credibility2 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+                    data = pooled,
                     na.action = na.omit)
 
-reg.credibility3 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = df.def,
+reg.credibility3 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
+                    data = pooled,
                     na.action = na.omit)
 
-reg.credibility4 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age.recoded + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = df.def,
+reg.credibility4 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age.recoded + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
+                    data = pooled,
                     na.action = na.omit)
 
 
@@ -888,11 +1352,11 @@ plot_model(reg.credibility4.centered, type = "pred", terms = c("perceived.indepe
 
 ### Perceived independence
 ```{r}
-reg.perceived.independence.30 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+reg.perceived.independence.30 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = df.30,
                     na.action = na.omit)
 
-reg.perceived.independence.check <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+reg.perceived.independence.check <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = df.check,
                     na.action = na.omit)
 
@@ -901,12 +1365,12 @@ tab_model(reg.perceived.independence.30, reg.perceived.independence.check, dv.la
 
 ### Vaccination intention
 ```{r eval=FALSE, include=FALSE}
-reg.intent.vaccine.30 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+reg.intent.vaccine.30 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
                     data = df.30,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
-reg.intent.vaccine.check  <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
+reg.intent.vaccine.check  <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
                     data = df.check,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
@@ -918,27 +1382,15 @@ Too few cases.
 
 ### Credibility index
 ```{r}
-reg.credibility.30 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
+reg.credibility.30 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
                     data = df.30,
                     na.action = na.omit)
 
-reg.credibility.check <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
+reg.credibility.check <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
                     data = df.check,
                     na.action = na.omit)
 
 tab_model(reg.credibility.30, reg.credibility.check, dv.labels = c("Credibility (filter = page submission)",  "Credibility (filter = manipulation check)"), show.ci = FALSE)
-```
-
-<br>
-
-# Familiarity
-```{r}
-p15 <-  df.def %>% ggplot(aes(familiarity.advice, perceived.independence.reversed)) + geom_jitter() + geom_smooth(method = "lm") + scale_x_continuous("Familiarity advice", breaks = 1:7) + scale_y_continuous("Perceived independence", breaks = 1:7) + labs(title = "Advice") + theme_light()
-
-p16 <-  df.def %>% ggplot(aes(familiarity.EMA, perceived.independence.reversed)) + geom_jitter() + geom_smooth(method = "lm") + scale_x_continuous("Familiarity EMA", breaks = 1:7) + scale_y_continuous("Perceived independence", breaks = 1:7) + labs(title = "EMA") + theme_light()
-
-ggarrange(p15, p16,
-          ncol = 2,nrow = 1)
 ```
 
 <br>
