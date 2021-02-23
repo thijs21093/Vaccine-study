@@ -1,5 +1,5 @@
 ---
-title: "Report COVID study EN V104"
+title: "Report COVID study EN V105"
 author: "Thijs de Boer"
 date: "2021"
 output:
@@ -691,12 +691,7 @@ reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.polit
                     data = df.def,
                     na.action = na.omit)
 
-reg.perceived.independence2 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = df.def,
-                    na.action = na.omit)
-
-
-tab_model(reg.perceived.independence1, reg.perceived.independence2,  show.ci = FALSE)
+tab_model(reg.perceived.independence1, show.ci = FALSE)
 ```
 
 <br >

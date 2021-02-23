@@ -2,7 +2,7 @@ library(tidyverse)
 library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN")
-test <- read.csv("DATA_EN-18022021.csv")
+test <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-23022021.csv")
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
 

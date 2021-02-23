@@ -751,7 +751,7 @@ reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.polit
                     data = df.def,
                     na.action = na.omit)
 
-reg.perceived.independence2 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+reg.perceived.independence2 <- lm(perceived.independence.reversed ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = df.def,
                     na.action = na.omit)
 
@@ -841,11 +841,11 @@ plot_model(reg.credibility4.centered, type = "pred", terms = c("perceived.indepe
 
 ### Perceived independence
 ```{r}
-reg.perceived.independence.30 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+reg.perceived.independence.30 <- lm(perceived.independence.reversed ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = df.30,
                     na.action = na.omit)
 
-reg.perceived.independence.check <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+reg.perceived.independence.check <- lm(perceived.independence.reversed ~  trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
                     data = df.check,
                     na.action = na.omit)
 

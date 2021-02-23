@@ -119,7 +119,7 @@ df.total <-df.total %>%
          IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nine|nine|negen|Negen|Neuf|neuf|nittionio|Nittionio"))==T,1,0))
 
 df.total <- df.total %>% 
-  mutate(manipulation.check = case_when(
+  mutate(comprehension.check = case_when(
    check == "no" & Q298 == 1 & experimental.group == "independence" ~ 1,
    check == "no" & Q298 == 2 & experimental.group == "advice" ~ 1,
 
@@ -134,9 +134,9 @@ df.total <- df.total %>%
    TRUE ~ 0)) # Coding needs to be double-checked in Qualtrics!
 
 df.total <- df.total %>% 
-  mutate(manipulation.check.failed = case_when(
-    manipulation.check == 1 ~ "passed",
-    manipulation.check == 0 ~ "failed"))
+  mutate(comprehension.check.failed = case_when(
+    comprehension.check == 1 ~ "passed",
+    comprehension.check == 0 ~ "failed"))
 
 # Demographics
 df.total <- df.total %>% 
@@ -151,7 +151,7 @@ df.total <- df.total %>%
   mutate(benefits.vaccines = Q6.2_2 %>% na_if(0),
          comments.general = Q20.6 %>% na_if(0),
          intent.vaccine = Q16.2  %>% na_if(0),
-         intent.vaccine.recoded = Q16.2 %>% recode("1=0; 2=0; 3=1; 4=1"),
+         intent.vaccine.recoded = Q16.2 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
          credibility.item1 = Q15.2 %>% na_if(0),
          credibility.item2.reversed = Q15.3 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item3.reversed = Q15.4 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
@@ -200,9 +200,15 @@ df.total <- df.total %>%
          importance.EMA = Q16.7_1 %>% na_if(0),
          importance.FDA = Q16.7_2 %>% na_if(0),
          importance.NRA = Q16.7_3 %>% na_if(0),
+         importance.EMA.recoded = Q16.7_1 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
+         importance.FDA.recoded = Q16.7_2 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
+         importance.NRA.recoded = Q16.7_3 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
          private.providers = Q20.2 %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         duration = Duration..in.seconds./60 %>% na_if(0))
+         duration = Duration..in.seconds./60 %>% na_if(0),
+         trust.EU.institutions = rowMeans(cbind(trust.EC,
+                        trust.EP,
+                        trust.council), na.rm=T))
 
 # Knowledge
 df.total <- df.total %>% mutate(knowledge = case_when(
@@ -292,7 +298,7 @@ pooled.experiment <- pooled %>%
   filter(experimental.group != "no text")
 
 check <-  pooled %>%  
-  filter(manipulation.check=="1")
+  filter(comprehension.check=="1")
 
 NL <-  pooled %>%  
   filter(country == "NL")

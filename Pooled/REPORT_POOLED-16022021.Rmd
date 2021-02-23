@@ -53,6 +53,8 @@ library(janitor)
 library(sjmisc)
 library(lavaan)
 library(semPlot)
+library(stargazer)
+library(semTools)
 ```
 
 ```{r}
@@ -110,12 +112,12 @@ pooled %>% filter(Finished == 1) %>% nrow
 ```
 
 
-Number of participants in the final dataset that failed the manipulation check:
+Number of participants in the final dataset that failed the comprehension check:
 ```{r}
 t4 <- pooled %>%  filter(Finished == 1) %>%
-   group_by(country, manipulation.check.failed)%>%
+   group_by(country, comprehension.check.failed)%>%
   summarise(n=n()) %>%
-  spread(manipulation.check.failed, n) %>%
+  spread(comprehension.check.failed, n) %>%
   adorn_totals("row")  %>% mutate(
    missing =  `<NA>`,
    missing = tidyr::replace_na(missing, 0),
@@ -148,7 +150,7 @@ Item 1: I believe that the EMA's opinion was based strictly on scientific consid
 ```{r}
 pooled %>%
   ggplot(aes(x=credibility.item1, fill = experimental.group)) +
-  geom_bar(width = 0.75,alpha=0.8)+
+  geom_bar(width = 0.75, alpha=0.8)+
   scale_x_continuous(name="",limits = c(0,8),breaks = 1:7)+
   scale_fill_manual(values = c("dodgerblue1", "dodgerblue2","dodgerblue3", "dodgerblue4"))+
   facet_grid(experimental.group ~ country,  margins=TRUE, scale="free") + 
@@ -238,9 +240,9 @@ pooled %>%
 
 ```{r}
 pooled.credibility <-pooled %>% 
-  select(credibility.item1:credibility.item6)
+  select(credibility.item1:credibility.item6, country)
 
-pooled.credibility %>% 
+pooled.credibility %>% select(-country) %>%
   tab_corr(triangle="lower",
            remove.spaces=T,
            p.numeric = T,
@@ -256,27 +258,17 @@ pooled.credibility %>%
 ```{r include=FALSE}
 factor.1.cfa <- 'policy.credibility  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed + credibility.item4 + credibility.item5 + credibility.item6'
 
-factor.3.cfa <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
+factor.3.cfa.base <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
 expert.based =~ credibility.item4 + credibility.item5
 stability   =~ credibility.item6'
 
-factor.3.cfa.alt <- 'non.interference.alt  =~  credibility.item2.reversed + credibility.item3.reversed
-              expert.based.alt =~ credibility.item1 + credibility.item4 + credibility.item5
-              stability.alt   =~ credibility.item6'
+factor.3.cfa.adjusted <- paste0(factor.3.cfa.base,
+"\n",
+"credibility.item2.reversed	~~	credibility.item3.reversed")
 
-factor.3.cfa.second <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
-              expert.based =~ credibility.item4 + credibility.item5
-              stability   =~ credibility.item6
-      policy.credibility =~ non.interference + expert.based + stability
-non.interference ~~ expert.based
-expert.based ~~ stability'
-
-factor.3.cfa.alt.second <- 'non.interference.alt  =~  credibility.item2.reversed + credibility.item3.reversed
-              expert.based.alt =~ credibility.item1 + credibility.item4 + credibility.item5
-              stability.alt   =~ credibility.item6
-      policy.credibility.alt =~ non.interference.alt + expert.based.alt + stability.alt
-non.interference.alt ~~ expert.based.alt
-expert.based.alt ~~ stability.alt'
+factor.3.cfa.alternative <- 'non.interference  =~ credibility.item2.reversed + credibility.item3.reversed
+expert.based =~ credibility.item1 + credibility.item4 + credibility.item5 
+stability   =~ credibility.item6'
 ```
 
 
@@ -286,7 +278,9 @@ We conducted our confirmatory factor analysis using `R lavaan` package.
 
 <br>
 
-**One-factor model:**
+## One-factor model:
+
+**Model summary**
 ```{r,echo = TRUE}
 fit.1factor <- cfa(factor.1.cfa, 
            std.lv=TRUE,  
@@ -298,131 +292,295 @@ summary(fit.1factor,fit.measures=T,standardize=T)
 
 <br>
 
-**Three-factors model:**
-```{r,echo = TRUE}
-fit.3factors <- cfa(factor.3.cfa, 
-           std.lv=TRUE,  
-           missing="fiml",  
-           data=pooled.credibility)
-
-summary(fit.3factors,fit.measures=T,standardize=T)
-```
-
-<br>
-
-**Three-factors model alternative:**
-
-<br>
-
-In this model, item 1 is part of 'expertise-based' instead of 'non-interference'.
-
-<br>
-
-```{r,echo = TRUE}
-fit.3factors.alt <- cfa(factor.3.cfa.alt, 
-           std.lv=TRUE,  
-           missing="fiml",  
-           data=pooled.credibility)
-
-summary(fit.3factors.alt, fit.measures=T, standardize=T)
-```
-
-## A closer look
-
-### Three factors (original dimensions)
-
-<br>
-
-**comparison with one-factor model**
-```{r,echo = TRUE}
-anova(fit.3factors, fit.1factor)
-```
-
 **Visualization of the model**
 ```{r}
-semPaths(fit.3factors, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+semPaths(fit.1factor, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
          sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
 ```
 
-**Factor loading**
+<br > 
+
+## Three-factors model: base
+
+**Model summary**
+```{r,echo = TRUE}
+fit.3factors.base <- cfa(factor.3.cfa.base, 
+           std.lv=TRUE,  
+           missing="fiml",  
+           data=pooled.credibility)
+
+summary(fit.3factors.base, fit.measures=T,standardize=T)
+```
+
+<br>
+
+**Visualization of the model**
 ```{r}
-parameterEstimates(fit.3factors, standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
-  mutate(Indicator = str_c("Item ",1:6)) %>% 
-  kable(digits = 3)%>% 
-    kable_styling(bootstrap_options = c("condensed"),
+semPaths(fit.3factors.base, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```
+
+<br > 
+
+**Modification indices**
+```{r}
+fit.improve.base <- modificationindices(fit.3factors.base, standardized =TRUE)
+
+fit.improve.base %>%
+  as_tibble() %>%
+  slice_max(mi, n = 10) %>%
+  arrange(-mi) %>% 
+  select( 'Left hand side' = lhs, Operator = op, 'Right hand side' = rhs, 'Modification index' = mi,  'Expected parameter change'= epc) %>%
+  kable(digits = 3) %>% 
+    kable_styling(bootstrap_options = c("condensed",  "striped", "hover"),
                 full_width = F,
-                position = "left")%>%
-  collapse_rows(columns = 1, valign = "top")
+                position = "left")
 ```
+
 <br>
 
-### Three factors (alternative)
-
-**comparison with one-factor model**
-```{r,echo = TRUE}
-anova(fit.3factors.alt, fit.1factor)
-```
-
-**Visualization of the model**
+**Key parameters**
 ```{r}
-semPaths(fit.3factors.alt, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
-```
-
-**Factor loading**
-```{r}
-parameterEstimates(fit.3factors.alt, standardized=TRUE) %>% 
+parameterEstimates(fit.3factors.base, standardized=TRUE) %>% 
   filter(op == "=~") %>% 
   select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
-  mutate(Indicator = str_c("Item ",1:6)) %>% 
-  kable(digits = 3)%>% 
+  mutate(Indicator = c(str_c("Item ",1:6))) %>% 
+  kable(digits = 3) %>% 
     kable_styling(bootstrap_options = c("condensed"),
                 full_width = F,
                 position = "left")%>%
   collapse_rows(columns = 1, valign = "top")
 ```
 
-## How does it look if we include a second order latent variable?
+## Three-factors model - adjusted:
 
-**Three-factors model with second order:**
-```{r message=TRUE, warning=TRUE, include=FALSE}
-fit.3factors.second <- cfa(factor.3.cfa.second, 
+**Model summary**
+```{r,echo = TRUE}
+fit.3factors.adjusted <- cfa(factor.3.cfa.adjusted, 
+           std.lv=TRUE,  
+           missing="fiml",  
            data=pooled.credibility)
 
-summary(fit.3factors.second, standardize=T)
+summary(fit.3factors.adjusted, fit.measures=T, standardize=T)
 ```
+
+<br >
+
 **Visualization of the model**
-```{r message=TRUE, warning=TRUE, paged.print=FALSE}
-semPaths(fit.3factors.second, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+```{r}
+semPaths(fit.3factors.adjusted, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
          sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
 ```
 
 <br >
 
-**Three-factors model alternative with second order:**
+**Modification indices**
+```{r}
+fit.improve.adjusted <- modificationindices(fit.3factors.adjusted)
+
+fit.improve.adjusted %>%
+  as_tibble() %>%
+  slice_max(mi, n = 10) %>%
+  arrange(-mi) %>% 
+  select( 'Left hand side' = lhs, Operator = op, 'Right hand side' = rhs, 'Modification index' = mi,  'Expected parameter change'= epc) %>%
+  kable(digits = 3) %>% 
+    kable_styling(bootstrap_options = c("condensed",  "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
 
 <br>
 
-```{r message=TRUE, warning=TRUE, include=FALSE}
-fit.3factors.alt.second <- cfa(factor.3.cfa.alt.second, 
-           data=pooled.credibility,
-           missing="fiml")
+Judging this table,  it seems that item 1 may be better assigned to the 'expert.based' factor, rather than the 'non-interference' factor. Also, note the very high correlation between non-interference and expert-based.
 
-summary(fit.3factors.alt.second, fit.measures=T, standardize=T)
+<br>
+
+**Key parameters**
+```{r}
+parameterEstimates(fit.3factors.adjusted, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
+  mutate(Indicator = c(str_c("Item ",1:6))) %>% 
+  kable(digits = 3) %>% 
+    kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left")%>%
+  collapse_rows(columns = 1, valign = "top")
 ```
 
+## Three-factors model - alternative 
+
+**Model summary**
+```{r message=TRUE, warning=TRUE, include=FALSE}
+fit.3factors.alternative <- cfa(factor.3.cfa.alternative, 
+           std.lv=TRUE,  
+           missing="fiml",  
+           data=pooled.credibility)
+
+summary(fit.3factors.alternative, standardize=T, fit.measures=T)
+```
+
+<br > 
 
 **Visualization of the model**
-```{r}
-semPaths(fit.3factors.alt.second, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+```{r message=TRUE, warning=TRUE, paged.print=FALSE}
+semPaths(fit.3factors.alternative, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
          sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
 ```
 
-Both models have issues. Further investigation is needed to determine the cause of this problem. Theoretically, it would make sense to add a second order as we expect the three dimensions to be related. That is, we see these dimensions as part of a bigger latent variable ("policy credibility").
+<br > 
 
-<br>
+**Modification indices**
+```{r}
+fit.improve.alternative <- modificationindices(fit.3factors.alternative)
+
+fit.improve.alternative %>%
+  as_tibble() %>%
+  slice_max(mi, n = 10) %>%
+  arrange(-mi) %>% 
+  select( 'Left hand side' = lhs, Operator = op, 'Right hand side' = rhs, 'Modification index' = mi,  'Expected parameter change'= epc) %>%
+  kable(digits = 3) %>% 
+    kable_styling(bootstrap_options = c("condensed",  "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
+< br>
+
+**Factor loading**
+```{r}
+parameterEstimates(fit.3factors.alternative, standardized=TRUE) %>% 
+  filter(op == "=~")  %>% 
+ select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>%  
+  mutate(Indicator = c("Item 2", "Item 3", "Item 1", "Item 4", "Item 5", "Item 6")) %>% 
+  kable(digits = 3)%>% 
+    kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left") %>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+## Model comparison
+
+**1 factor vs. 3 factors (base)**
+```{r,echo = TRUE}
+lavTestLRT(fit.3factors.base, fit.1factor)
+```
+
+**3 factors (base) vs. 3 factors (adjusted)**
+```{r,echo = TRUE}
+lavTestLRT(fit.3factors.base, fit.3factors.adjusted)
+```
+
+**1 factor vs. 3 factors (alternative)**
+```{r}
+lavTestLRT(fit.1factor, fit.3factors.alternative)
+```
+
+## Comparing models: A nice table 
+```{r}
+cfa.compare <- cbind(
+m1 = inspect(fit.1factor, 'fit.measures'),
+m2 =inspect(fit.3factors.base, 'fit.measures'),
+m3= inspect(fit.3factors.adjusted, 'fit.measures'),
+m4 =inspect(fit.3factors.alternative, 'fit.measures'))
+
+cfa.compare  %>%
+   t() %>%
+   as_tibble() %>% 
+   round(3) %>%
+   unite("rmsea.ci", rmsea.ci.lower:rmsea.ci.upper, remove = FALSE, sep = " - ")  %>%
+   select(Parameters = npar,
+          "Chi-squared" = chisq,
+          "Degrees of freedom" = df,
+          "p-value" = pvalue,
+          CFI = cfi,
+          TLI = tli,
+          AIC = aic,
+          BIC = bic,
+          RMSEA = rmsea,
+          "RMSEA 95% CI" = rmsea.ci,
+          "RMSEA < 0.05 p-value" = rmsea.pvalue) %>% 
+   mutate(Model = c("Single factor",
+                     "Baseline",
+                     "Adjusted",
+                     "Alternative")) %>% relocate(Model) %>%
+  kable(booktabs = TRUE) %>% pack_rows(
+  index = c("One factor" = 1, "Three Factors" = 3)) %>%  
+    kable_styling(bootstrap_options = c("condensed",  "striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
+# Model per country:
+```{r}
+fit.final.country <- cfa(factor.3.cfa.adjusted, 
+           data=pooled.credibility,
+          std.lv=TRUE,  
+           missing="fiml",
+          group = "country")
+
+summary(fit.final.country, standardize=T, fit.measures=T)
+
+```
+
+<br > 
+
+**Visualization of the model**
+```{r message=TRUE, warning=TRUE, paged.print=FALSE}
+semPaths(fit.final.country, "std",ask=FALSE, weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
+         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE, title = TRUE) 
+# I couldn't figure out which model corresponds to which country. 
+```
+
+<br > 
+
+**Modification indices**
+```{r}
+invariance <- measEq.syntax(configural.model = factor.3.cfa.adjusted, 
+                      data = pooled.credibility, 
+                      ordered = c("credibility.item1", "credibility.item2.reversed", "credibility.item3.reversed", "credibility.item4", "credibility.item5", "credibility.item6"),
+                      parameterization = "theta",
+                      ID.fac = "std.lv",
+                      ID.cat = "Wu.Estabrook.2016",
+                      group = "country",
+                      group.equal = "configural")
+
+invariance.model <- as.character(invariance)
+
+invaraince.fit <- cfa(invariance.model,
+                    data = pooled.credibility,
+                    group = "country",
+                     ordered = c("credibility.item1",
+                                 "credibility.item2.reversed",
+                                 "credibility.item3.reversed",
+                                 "credibility.item4",
+                                 "credibility.item5",
+                                 "credibility.item6"))
+
+summary(invaraince.fit)
+
+# 'MeasE1.syntax' is the successor of the now deprecated function 'measurementInvariance'. It can be used to analyze (in)variance between groups: https://lavaan.ugent.be/tutorial/groups.html.
+
+# However, the current code gives a warning and the output seems incorrect.
+
+# See for instructions: https://towardsdatascience.com/measurement-invariance-definition-and-example-in-r-15b4efcab351
+```
+
+< br>
+
+**Factor loading**
+```{r}
+parameterEstimates(fit.final.country, standardized=TRUE) %>% 
+  filter(op == "=~")  %>% 
+ select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all, Country = group) %>%  
+     relocate(Country) %>%
+  kable(digits = 3) %>% 
+    kable_styling(bootstrap_options = c("condensed","striped", "hover"),
+                full_width = F,
+                position = "left")
+```
+
 
 # Trust in EU institutions
 
@@ -431,7 +589,6 @@ Both models have issues. Further investigation is needed to determine the cause 
 <br >
 
 Trust in the European Parliament
-
 
 ```{r}
 pooled %>%
@@ -528,9 +685,9 @@ q1 <- pooled %>%
          trust.health.authorities,
          consequences.health,
          consequences.economic,
-         importance.EMA,
-         importance.FDA ,
-         importance.NRA,
+         importance.EMA.recoded,
+         importance.FDA.recoded,
+         importance.NRA.recoded,
          private.providers,
          knowledge,
          benefits.vaccines,
@@ -565,15 +722,15 @@ mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
 "12. Support for EU integration",
 "13. Interpersonal trust",
 "14. Familiarity with EMA",
-"15. FAmiliarity with EMA's advice",
+"15. FAmiliarity with EMA's opinion",
 "16. Crebility of EMA (pre-manipulation)",
 "17. Crebility of EMA (post-manipulation)",
 "18. Trust in public health authorities",
 "19. Consequences of coronacrisis for health",
 "20. Consequences of coronacrisis for income",
-"21. Importance of EMA's advice",
-"22. Importance of other regulators' advice",
-"23. Importance of NRA's advice",
+"21. Importance of EMA's opinion",
+"22. Importance of other regulators' opinion (e.g., FDA)",
+"23. Importance of NRA's opinion",
 "24. Believe in private markets",
 "25. Knowledge of coronacrisis",
 "26. Benefits of vaccines",
@@ -687,8 +844,8 @@ ggarrange(pooled  %>% ggplot(aes(x = experimental.group, y = perceived.independe
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "", title = "Complete dataset") +
     stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank()),
     
-    pooled %>% filter(manipulation.check.failed == "passed") %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
-      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "", title = "Only those who passed the manipulation check") +
+    pooled %>% filter(comprehension.check.failed == "passed") %>% ggplot(aes(x = experimental.group, y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "", title = "Only those who passed the comprehension check") +
     stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank()), nrow = 1, common.legend =  TRUE, legend = "bottom")
 ```
 
@@ -701,7 +858,7 @@ tadaa_t.test(data = pooled.experiment, response = perceived.independence.reverse
 
 <br>
 
-### With those who failed the manipulation check filtered out (only advice/independence)
+### With those who failed the comprehension check filtered out (only advice/independence)
 ```{r}
 tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
@@ -778,7 +935,7 @@ plot_frq((duration),
 ```{r}
 pooled %>% filter(intro.submit < 100) %>%  
 plot_frq((intro.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = scales::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
@@ -795,7 +952,7 @@ plot_frq((intro.submit),
 ```{r}
 pooled %>% filter(manipulation.submit < 100) %>%
 plot_frq((manipulation.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = scales::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) +
   theme(axis.text = element_text(face = "bold",  size= 9)) +
@@ -833,7 +990,7 @@ ggarrange(t10, common.legend = TRUE, legend = "bottom")
 ```{r}
 pooled %>% filter(decision.submit < 100) %>% 
 plot_frq((decision.submit),
-        geom.colors = alpha("dodgerblue2",0.8),
+        geom.colors = scales::alpha("dodgerblue2",0.8),
         type = "hist",
         geom.size = 1) + 
   theme(axis.text = element_text(face = "bold",  size= 9)) +
@@ -846,19 +1003,19 @@ plot_frq((decision.submit),
 
 <br>
 
-***...Failing the manipulation check***
+***...Failing the comprehension check***
 
 ```{r}
-t10 <- pooled.experiment %>% filter(duration < 30) %>% drop_na(manipulation.check.failed) %>%
-  ggplot(aes(x= duration, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
+t10 <- pooled.experiment %>% filter(duration < 30) %>% drop_na(comprehension.check.failed) %>%
+  ggplot(aes(x= duration, color = comprehension.check.failed, fill = comprehension.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 2) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Total survey duration", x = "minutes") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-t11  <- pooled.experiment %>% filter(intro.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x= intro.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
+t11  <- pooled.experiment %>% filter(intro.submit < 60) %>% drop_na(comprehension.check.failed) %>% ggplot(aes(x= intro.submit, color = comprehension.check.failed, fill = comprehension.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - introduction", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-t12 <- pooled.experiment %>% filter(manipulation.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x=manipulation.submit, color = manipulation.check.failed, fill = manipulation.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+t12 <- pooled.experiment %>% filter(manipulation.submit < 60) %>% drop_na(comprehension.check.failed) %>% ggplot(aes(x=manipulation.submit, color = comprehension.check.failed, fill = comprehension.check.failed)) + geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) + geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - manipulation", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
-t13 <- pooled.experiment %>% filter(decision.submit < 60) %>% drop_na(manipulation.check.failed) %>% ggplot(aes(x=decision.submit, color =manipulation.check.failed, fill = manipulation.check.failed)) + 
+t13 <- pooled.experiment %>% filter(decision.submit < 60) %>% drop_na(comprehension.check.failed) %>% ggplot(aes(x=decision.submit, color =comprehension.check.failed, fill = comprehension.check.failed)) + 
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
  geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
@@ -882,7 +1039,7 @@ t16 <- pooled.experiment %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=m
 
 t17 <- pooled.experiment %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = experimental.group, fill = experimental.group)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Comprehension check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
 ggarrange(t14, t15, t16, t17, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
@@ -942,7 +1099,7 @@ t20 <- pooled %>% filter(manipulation.submit < 60) %>% ggplot(aes(x=manipulation
 
 t21 <- pooled %>% filter(decision.submit < 60) %>% ggplot(aes(x=decision.submit, color = device, fill = device)) +
  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", binwidth = 5) +
- geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds", color = "Manipulation Check") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
+ geom_density(alpha= .1, linetype= "dashed") + labs(title = "Page submission - EMA's decision", x = "seconds") + theme(axis.title.y = element_blank(), title = element_text(size = 7, face = "bold"),  axis.text = element_text(size = 9))
 
 ggarrange(t18, t19, t20, t21, nrow = 2, ncol = 2, labels="AUTO", legend = "bottom", common.legend = TRUE)
 ```
@@ -962,7 +1119,7 @@ ggarrange(t18, t19, t20, t21, nrow = 2, ncol = 2, labels="AUTO", legend = "botto
 pooled %>%
   plot_frq(device,
         ylim = c(0,nrow(pooled)),
-        geom.colors = alpha("dodgerblue1",0.8))+
+        geom.colors = scales::alpha("dodgerblue1",0.8))+
   theme_blank()
 ```
 
@@ -1297,17 +1454,56 @@ plot_model(m13, type = "int")
 <br > 
 
 # Explaining perceived political independence
-```{r}
-reg.perceived.independence1 <- lm(perceived.independence.reversed ~  trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = pooled,
+```{r results='asis'}
+pooled.regression <- pooled %>% drop_na(age)
+
+r1.4<- lm(perceived.independence.reversed ~
+         trust.EU.institutions + trust.EP, data = pooled)
+
+r1.1 <- lm(perceived.independence.reversed ~
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines +
+         
+         experimental.group + 
+         
+         female +
+         healthcare +
+         poly(age, 2) +
+         country,
+                    data = pooled.regression,
                     na.action = na.omit)
 
-reg.perceived.independence2 <- lm(perceived.independence.reversed ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic +  EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = pooled,
-                    na.action = na.omit)
+r1.2 <- update(r1.1, . ~ . + trust.media)
 
 
-tab_model(reg.perceived.independence1, reg.perceived.independence2,  show.ci = FALSE)
+stargazer(r1.1,
+  r1.2,
+  
+  type = "html",
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  dep.var.labels = "Perceived political independence",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with Standard errors in parentheses.",
+  notes.append = FALSE
+)
 ```
 
 <br >
@@ -1416,6 +1612,8 @@ plot_model(reg.credibility3.centered, type = "int", mdrt.values = "meansd")[[2]]
 ```{r}
 plot_model(reg.credibility4.centered, type = "pred", terms = c("perceived.independence.reversedc", "age.recoded"))
 ```
+
+
 
 
 <br>
