@@ -71,23 +71,23 @@ set_theme(
 
 # Population
 
-Total number of cases, removed cases and final cases (complete cases):
+Total number of cases, final cases, and removed cases (complete cases only):
 ```{r}
 t1 <- df.total %>% filter(Finished == 1) %>%  
   group_by(country) %>% 
   tally() %>% 
-  mutate(percentage = ((n/nrow(df.total %>% filter(Finished == 1))*100) %>% round(1))) %>%
+  mutate(percentage = (n/nrow(df.total %>% filter(Finished == 1))*100)) %>%
   adorn_totals("row")
 
-t2 <- df.total %>% filter(Finished == 1 & IMC != 1 | age < 18) %>%  
+t2 <- pooled  %>% filter(Finished == 1) %>%  
   group_by(country) %>% 
   tally() %>% 
-  mutate(percentage = ((n/nrow(df.total %>% filter(Finished == 1 & IMC != 1 | age < 18))*100) %>% round(1))) %>%
+  mutate(percentage = (n/nrow(pooled %>% filter(Finished == 1))*100)) %>%
   adorn_totals("row")
 
-t3 <- merge(x = t1, y = t2, by = "country", all.x = TRUE) %>%  mutate(n.final = (n.x-n.y),
-        percentage.final = (n.final/nrow(df.total %>% filter(Finished == 1 & IMC == 1 & age >= 18))*100) %>% round(1),
-        ratio = ((n.x-n.y)/n.x) %>% round(2)) 
+t3 <- merge(x = t1, y = t2, by = "country", all.x = TRUE) %>%  mutate(n.diff = (n.x-n.y),
+        percentage.diff = (n.diff/(sum(n.diff/2))*100),
+        ratio = (n.y/n.x)) 
 
 t3 %>% 
   kable(col.names = c("",
@@ -99,18 +99,15 @@ t3 %>%
                       "%",
                       "Ratio (final/total)"
                       ),
+        digits = 2,
         align=rep('c', 5)) %>% 
     kable_styling(bootstrap_options = c( "condensed",  "striped", "hover"),
                 full_width = F,
-                position = "left")  %>% add_header_above(c(" ", "Total"  = 2, "Failed IMC or under 18" = 2, "Final" = 2, " "))  %>%
+                position = "left")  %>% add_header_above(c(" ", "Total"  = 2, "Final" = 2, "Failed IMC or under 18" = 2, " "))  %>%
    column_spec(column = 2:8, width = "2cm")
 ```
 
-One case discrepancy??
-```{r}
-pooled %>% filter(Finished == 1) %>% nrow
-```
-
+<br >
 
 Number of participants in the final dataset that failed the comprehension check:
 ```{r}
@@ -140,7 +137,7 @@ t4 %>% select(-`<NA>`) %>%
 
 # Outcome variables
 
-In this section we provide additional details about out outcome variables -- the three aspects of policy credibility. We report the distributions and correlations of the six survey items. Thereafter, we include the R code and results of our confirmatory factor analysis.   
+In this section we provide additional details about our outcome variables -- the three aspects of policy credibility. We report the distributions and correlations of the six survey items. Thereafter, we include the R code and results of our confirmatory factor analysis.   
 
 
 ## Distributions of items
@@ -239,8 +236,15 @@ pooled %>%
 **Correlation matrix**
 
 ```{r}
-pooled.credibility <-pooled %>% 
-  select(credibility.item1:credibility.item6, country)
+pooled.credibility <- pooled %>% 
+  select(credibility.item1:credibility.item6, country) %>%
+  mutate(item1 = credibility.item1,
+         item2 = credibility.item2.reversed,
+         item3 = credibility.item3.reversed,
+         item4 = credibility.item4,
+         item5 = credibility.item5,
+         item6 = credibility.item6,
+         .keep = "unused")
 
 pooled.credibility %>% select(-country) %>%
   tab_corr(triangle="lower",
@@ -256,19 +260,19 @@ pooled.credibility %>% select(-country) %>%
 <br>
 
 ```{r include=FALSE}
-factor.1.cfa <- 'policy.credibility  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed + credibility.item4 + credibility.item5 + credibility.item6'
+factor.1.cfa <- 'policy.credibility  =~ item1 + item2 + item3 + item4 + item5 + item6'
 
-factor.3.cfa.base <- 'non.interference  =~ credibility.item1 + credibility.item2.reversed + credibility.item3.reversed
-expert.based =~ credibility.item4 + credibility.item5
-stability   =~ credibility.item6'
+factor.3.cfa.base <- 'non.interference  =~ item1 + item2 + item3
+expertise =~ item4 + item5
+stability   =~ item6'
 
 factor.3.cfa.adjusted <- paste0(factor.3.cfa.base,
 "\n",
-"credibility.item2.reversed	~~	credibility.item3.reversed")
+"item2	~~	item3")
 
-factor.3.cfa.alternative <- 'non.interference  =~ credibility.item2.reversed + credibility.item3.reversed
-expert.based =~ credibility.item1 + credibility.item4 + credibility.item5 
-stability   =~ credibility.item6'
+factor.3.cfa.alternative <- 'non.interference  =~ item2 + item3
+expertise =~ item1 + item4 + item5 
+stability   =~ item6'
 ```
 
 
@@ -278,7 +282,7 @@ We conducted our confirmatory factor analysis using `R lavaan` package.
 
 <br>
 
-## One-factor model:
+## One-factor model - Single factor
 
 **Model summary**
 ```{r,echo = TRUE}
@@ -294,13 +298,24 @@ summary(fit.1factor,fit.measures=T,standardize=T)
 
 **Visualization of the model**
 ```{r}
-semPaths(fit.1factor, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+semPaths(fit.1factor, "std",
+         layout = "tree2",
+         nCharNodes = 0,
+         nCharEdges = 0,
+         sizeMan = 12,
+         sizeLat = 30,
+         intercepts = FALSE,
+         curvePivot = TRUE,
+         edge.label.cex = 1.5,
+         curveAdjacent = TRUE,
+         style = "lisrel",
+         label.scale = FALSE,
+         nodeLabels = c(str_c("Item ",1:6), "Policy credibility")) 
 ```
 
 <br > 
 
-## Three-factors model: base
+## Three-factors model - base
 
 **Model summary**
 ```{r,echo = TRUE}
@@ -316,8 +331,20 @@ summary(fit.3factors.base, fit.measures=T,standardize=T)
 
 **Visualization of the model**
 ```{r}
-semPaths(fit.3factors.base, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+semPaths(fit.3factors.base,  "std",
+         layout = "tree2",
+         nCharNodes = 0,
+         nCharEdges = 0,
+         sizeMan = 8,
+         sizeLat = 20,
+         intercepts = FALSE,
+         curvePivot = TRUE,
+         edge.label.cex = 1.3,
+         curveAdjacent = TRUE,
+         style = "lisrel",
+         label.scale = FALSE,
+         label.cex = 0.65,
+         nodeLabels = c(str_c("Item ",1:6), "Non-interference", "Expertise", "Stability")) 
 ```
 
 <br > 
@@ -339,6 +366,10 @@ fit.improve.base %>%
 
 <br>
 
+It can be gleaned from this table that allowing item 2 and item 3 to correlate enhances the fit of the model. This makes sense as these variables are asked in a very similar way. The next model shows the result of this adjustment.
+
+<br>
+
 **Key parameters**
 ```{r}
 parameterEstimates(fit.3factors.base, standardized=TRUE) %>% 
@@ -352,7 +383,7 @@ parameterEstimates(fit.3factors.base, standardized=TRUE) %>%
   collapse_rows(columns = 1, valign = "top")
 ```
 
-## Three-factors model - adjusted:
+## Three-factors model - adjusted
 
 **Model summary**
 ```{r,echo = TRUE}
@@ -368,8 +399,21 @@ summary(fit.3factors.adjusted, fit.measures=T, standardize=T)
 
 **Visualization of the model**
 ```{r}
-semPaths(fit.3factors.adjusted, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+semPaths(fit.3factors.adjusted,
+         "std",
+         layout = "tree2",
+         nCharNodes = 0,
+         nCharEdges = 0,
+         sizeMan = 8,
+         sizeLat = 20,
+         intercepts = FALSE,
+         curvePivot = TRUE,
+         edge.label.cex = 1.3,
+         curveAdjacent = TRUE,
+         style = "lisrel",
+         label.scale = FALSE,
+         label.cex = 0.65,
+         nodeLabels = c(str_c("Item ",1:6), "Non-interference", "Expertise", "Stability"))
 ```
 
 <br >
@@ -391,7 +435,7 @@ fit.improve.adjusted %>%
 
 <br>
 
-Judging this table,  it seems that item 1 may be better assigned to the 'expert.based' factor, rather than the 'non-interference' factor. Also, note the very high correlation between non-interference and expert-based.
+Judging this table,  it seems that item 1 may be better assigned to the 'expertise' factor, instead of the 'non-interference' factor. Also, note the very high correlation between non-interference and expertise and the somewhat low loadings of item 2 and item 3. The next model shows what happens if item 1 is assigned to the 'expertise' factor.
 
 <br>
 
@@ -411,7 +455,7 @@ parameterEstimates(fit.3factors.adjusted, standardized=TRUE) %>%
 ## Three-factors model - alternative 
 
 **Model summary**
-```{r message=TRUE, warning=TRUE, include=FALSE}
+```{r}
 fit.3factors.alternative <- cfa(factor.3.cfa.alternative, 
            std.lv=TRUE,  
            missing="fiml",  
@@ -423,9 +467,22 @@ summary(fit.3factors.alternative, standardize=T, fit.measures=T)
 <br > 
 
 **Visualization of the model**
-```{r message=TRUE, warning=TRUE, paged.print=FALSE}
-semPaths(fit.3factors.alternative, "std", weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE) 
+```{r paged.print=FALSE}
+semPaths(fit.3factors.alternative, 
+         "std",
+         layout = "tree2",
+         nCharNodes = 0,
+         nCharEdges = 0,
+         sizeMan = 8,
+         sizeLat = 20,
+         intercepts = FALSE,
+         curvePivot = TRUE,
+         edge.label.cex = 1.3,
+         curveAdjacent = TRUE,
+         style = "lisrel",
+         label.scale = FALSE,
+         label.cex = 0.65,
+         nodeLabels = c("Item 2", "Item 3", "Item 1", "Item 4", "Item 5", "Item 6", "Non-interference", "Expertise", "Stability"))
 ```
 
 <br > 
@@ -445,9 +502,11 @@ fit.improve.alternative %>%
                 position = "left")
 ```
 
-< br>
+<br >
+No (theoretically sensible) improvements are possible.
+<br >
 
-**Factor loading**
+**Key parameters**
 ```{r}
 parameterEstimates(fit.3factors.alternative, standardized=TRUE) %>% 
   filter(op == "=~")  %>% 
@@ -467,15 +526,21 @@ parameterEstimates(fit.3factors.alternative, standardized=TRUE) %>%
 lavTestLRT(fit.3factors.base, fit.1factor)
 ```
 
+<br >
+
 **3 factors (base) vs. 3 factors (adjusted)**
 ```{r,echo = TRUE}
 lavTestLRT(fit.3factors.base, fit.3factors.adjusted)
 ```
 
+<br >
+
 **1 factor vs. 3 factors (alternative)**
 ```{r}
 lavTestLRT(fit.1factor, fit.3factors.alternative)
 ```
+
+<br >
 
 ## Comparing models: A nice table 
 ```{r}
@@ -500,7 +565,7 @@ cfa.compare  %>%
           BIC = bic,
           RMSEA = rmsea,
           "RMSEA 95% CI" = rmsea.ci,
-          "RMSEA < 0.05 p-value" = rmsea.pvalue) %>% 
+          "RMSEA p-value" = rmsea.pvalue) %>% 
    mutate(Model = c("Single factor",
                      "Baseline",
                      "Adjusted",
@@ -512,7 +577,7 @@ cfa.compare  %>%
                 position = "left")
 ```
 
-# Model per country:
+## Model per country
 ```{r}
 fit.final.country <- cfa(factor.3.cfa.adjusted, 
            data=pooled.credibility,
@@ -527,49 +592,27 @@ summary(fit.final.country, standardize=T, fit.measures=T)
 <br > 
 
 **Visualization of the model**
-```{r message=TRUE, warning=TRUE, paged.print=FALSE}
-semPaths(fit.final.country, "std",ask=FALSE, weighted = FALSE, nCharNodes = 7, shapeMan = "rectangle",
-         sizeMan = 8,  intercepts = FALSE, edge.label.cex = 1, curvePivot = TRUE, title = TRUE) 
-# I couldn't figure out which model corresponds to which country. 
+```{r message=TRUE, warning=TRUE, paged.print=TRUE}
+semPaths(fit.final.country,
+         "std",
+         layout = "tree2",
+         nCharNodes = 0,
+         nCharEdges = 0,
+         sizeMan = 8,
+         sizeLat = 20,
+         intercepts = FALSE,
+         curvePivot = TRUE,
+         edge.label.cex = 1.3,
+         curveAdjacent = TRUE,
+         style = "lisrel",
+         label.scale = FALSE,
+         label.cex = 0.65,
+         nodeLabels = c(str_c("Item ",1:6), "Non-interference", "Expertise", "Stability")) 
 ```
 
 <br > 
 
-**Modification indices**
-```{r}
-invariance <- measEq.syntax(configural.model = factor.3.cfa.adjusted, 
-                      data = pooled.credibility, 
-                      ordered = c("credibility.item1", "credibility.item2.reversed", "credibility.item3.reversed", "credibility.item4", "credibility.item5", "credibility.item6"),
-                      parameterization = "theta",
-                      ID.fac = "std.lv",
-                      ID.cat = "Wu.Estabrook.2016",
-                      group = "country",
-                      group.equal = "configural")
-
-invariance.model <- as.character(invariance)
-
-invaraince.fit <- cfa(invariance.model,
-                    data = pooled.credibility,
-                    group = "country",
-                     ordered = c("credibility.item1",
-                                 "credibility.item2.reversed",
-                                 "credibility.item3.reversed",
-                                 "credibility.item4",
-                                 "credibility.item5",
-                                 "credibility.item6"))
-
-summary(invaraince.fit)
-
-# 'MeasE1.syntax' is the successor of the now deprecated function 'measurementInvariance'. It can be used to analyze (in)variance between groups: https://lavaan.ugent.be/tutorial/groups.html.
-
-# However, the current code gives a warning and the output seems incorrect.
-
-# See for instructions: https://towardsdatascience.com/measurement-invariance-definition-and-example-in-r-15b4efcab351
-```
-
-< br>
-
-**Factor loading**
+**Key parameters**
 ```{r}
 parameterEstimates(fit.final.country, standardized=TRUE) %>% 
   filter(op == "=~")  %>% 
@@ -581,6 +624,41 @@ parameterEstimates(fit.final.country, standardized=TRUE) %>%
                 position = "left")
 ```
 
+<br >
+
+**Invariance** 
+```{r}
+invariance <- measEq.syntax(configural.model = factor.3.cfa.adjusted, 
+                      data = pooled.credibility, 
+                      ordered = c("item1", "item2", "item3", "item4", "item5", "item6"),
+                      parameterization = "theta",
+                      ID.fac = "std.lv",
+                      ID.cat = "Wu.Estabrook.2016",
+                      group = "country",
+                      group.equal = "configural")
+
+invariance.model <- as.character(invariance)
+
+invaraince.fit <- cfa(invariance.model,
+                    data = pooled.credibility,
+                    group = "country",
+                     ordered = c("item1",
+                                 "item2",
+                                 "item3",
+                                 "item4",
+                                 "item5",
+                                 "item6"))
+
+summary(invaraince.fit)
+
+# 'MeasE1.syntax' is the successor of the now deprecated function 'measurementInvariance'. It can be used to analyze (in)variance between groups: https://lavaan.ugent.be/tutorial/groups.html.
+# However, the current code gives a warning and the output seems incorrect.
+# See for instructions: https://towardsdatascience.com/measurement-invariance-definition-and-example-in-r-15b4efcab351
+```
+
+<br >
+This code gives a warning. Further examination is needed.
+<br >
 
 # Trust in EU institutions
 
@@ -863,9 +941,6 @@ tadaa_t.test(data = pooled.experiment, response = perceived.independence.reverse
 tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
 
-<br>
-
-### Anova?
 
 # Time
 
@@ -1273,14 +1348,19 @@ plot_frq(female,
 
 ## Education
 
+Not included yet.
 
+<br>
 
 ## Income
 
+Not included yet.
 
 <br>
 
 ## Province
+
+Not included yet.
 
 <br>
 
@@ -1455,10 +1535,7 @@ plot_model(m13, type = "int")
 
 # Explaining perceived political independence
 ```{r results='asis'}
-pooled.regression <- pooled %>% drop_na(age)
-
-r1.4<- lm(perceived.independence.reversed ~
-         trust.EU.institutions + trust.EP, data = pooled)
+pooled.regression <- pooled # To do: select variables included in regression model
 
 r1.1 <- lm(perceived.independence.reversed ~
          trust.EU.institutions +
@@ -1478,37 +1555,39 @@ r1.1 <- lm(perceived.independence.reversed ~
          importance.NRA.recoded +
          private.providers +
          knowledge +
-         benefits.vaccines +
-         
-         experimental.group + 
-         
-         female +
-         healthcare +
-         poly(age, 2) +
-         country,
+         benefits.vaccines,
                     data = pooled.regression,
                     na.action = na.omit)
 
-r1.2 <- update(r1.1, . ~ . + trust.media)
 
+r1.2 <- stats::update(r1.1, . ~ . + experimental.group)
+          
+r1.3 <- stats::update(r1.2, . ~ . +
+        female +
+         healthcare +
+         poly(age, 2) +
+         country) 
+         
+r1.4 <- stats::update(r1.3, . ~ . + trust.media)
 
 stargazer(r1.1,
-  r1.2,
-  
-  type = "html",
+          r1.2,
+          r1.3,
+          r1.4,
   report = "vcsp",
   style = "apsr",
   omit.stat = c("ser", "f"),
+  type = "html",
   dep.var.labels = "Perceived political independence",
   initial.zero = FALSE,
-  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with Standard errors in parentheses.",
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
   notes.append = FALSE
 )
 ```
 
 <br >
 
-# Explaining Vaccination intention
+# Explaining vaccination intention
 
 ## Distribution of variable
 ```{r}
@@ -1516,107 +1595,391 @@ pooled %>%
   ggplot(aes(intent.vaccine, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
-          labs(y = "relative frequencies", x = "Vaccination intention") +
+          labs(y = "Relative frequencies", x = "Vaccination intention") +
           facet_grid(~country, margins = TRUE) + theme_light()
-
-
 ```
 
 ## Regression models
-```{r}
-reg.intent.vaccine1 <- glm(intent.vaccine.recoded ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = pooled,
+```{r results='asis'}
+r2.1 <- glm(intent.vaccine.recoded ~ credibility.index,
+                    data = pooled.regression,
                     na.action = na.omit,
                     family = binomial(link = 'logit'))
 
-reg.intent.vaccine2 <- glm(intent.vaccine.recoded ~ credibility.index + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = pooled,
-                    na.action = na.omit,
-                    family = binomial(link = 'logit'))
 
-reg.intent.vaccine3 <- glm(intent.vaccine.recoded ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = pooled,
-                    na.action = na.omit,
-                    family = binomial(link = 'logit'))
+r2.2 <- stats::update(r2.1, . ~ . + 
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines)
+          
+r2.3 <- stats::update(r2.2, . ~ . +
+          female +
+         healthcare +
+         poly(age, 2) +
+         country) 
+         
+r2.4 <- stats::update(r2.3, . ~ . +
+                        trust.media)
 
-reg.intent.vaccine4 <- glm(intent.vaccine.recoded ~ credibility.index + perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age + healthcare + income,
-                    data = pooled,
-                    na.action = na.omit,
-                    family = binomial(link = 'logit'))
+stargazer(r2.1,
+          r2.2,
+          r2.3,
+          r2.4,
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  type = "html",
+  dep.var.labels = "Vaccination intention",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes.append = FALSE
+)
 
-tab_model(reg.intent.vaccine1, reg.intent.vaccine2, reg.intent.vaccine3, reg.intent.vaccine4, show.ci = FALSE)
 ```
 
 <br>
 
 # Explaning crebility of EMA's decision
 
-
 ## Stability
 
 ### Distribution of variable
 ```{r}
-reg.credibility1 <- lm(credibility.index  ~ trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice + political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
+pooled %>%
+  ggplot(aes(stability, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "Relative frequencies", x = "Stability") +
+          facet_grid(~country, margins = TRUE) + theme_light()
+```
+
+### Effect of the manipulation
+```{r}
+pooled  %>% ggplot(aes(x = experimental.group, y = stability, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank())
+```
+
+## Regression models
+```{r results='asis'}
+r3.1 <- lm(stability  ~ perceived.independence.reversed + 
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines +
+        female +
+         healthcare +
+         poly(age, 2) +
+         country,
                     data = pooled,
                     na.action = na.omit)
 
-reg.credibility2 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income,
-                    data = pooled,
-                    na.action = na.omit)
+r3.2 <- stats::update(r3.1, . ~ . -
+            perceived.independence.reversed +
+            experimental.group) 
+         
+r3.3 <- stats::update(r3.1, . ~ . + 
+            benefits.vaccines:perceived.independence.reversed) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
 
-reg.credibility3 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + poly(age, 2) + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = pooled,
-                    na.action = na.omit)
+r3.4 <- stats::update(r3.2, . ~ . + 
+            benefits.vaccines:experimental.group) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
 
-reg.credibility4 <- lm(credibility.index  ~ perceived.independence.reversed + trust.politicians + trust.scientist + trust.EC + trust.health.authorities + interpersonal.trust + benefits.vaccines + credibility.EMA.post + familiarity.EMA +  + familiarity.advice +  political.ideology + consequences.health + consequences.economic + EU.integration + private.providers + knowledge +  experimental.group + female + age.recoded + healthcare + income + perceived.independence.reversed:benefits.vaccines + benefits.vaccines:experimental.group,
-                    data = pooled,
-                    na.action = na.omit)
+stargazer(r3.1,
+          r3.3,
+          r3.2,
+          r3.4,
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  type = "html",
+  dep.var.labels = "Stability",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes.append = FALSE
+)
 
+# Trust in media not yet included.
+```
 
-reg.credibility3.centered <- meanCenter(reg.credibility3, centerOnlyInteractors = TRUE, centerDV = FALSE)
-
-reg.credibility4.centered <- meanCenter(reg.credibility4, centerOnlyInteractors = TRUE, centerDV = FALSE)
-
-tab_model(reg.credibility1, reg.credibility2, reg.credibility3.centered, show.ci = FALSE)
+<br > 
+**Interaction effect: Perceived political independence X Benefits of vaccines**
+```{r}
+plot_model(r3.3, type = "int", mdrt.values = "meansd")
 ```
 
 ## Expertise
 
 ### Distribution of variable
+```{r}
+pooled %>%
+  ggplot(aes(expertise, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "Relative frequencies", x = "Expertise") +
+          facet_grid(~country, margins = TRUE) + theme_light()
+```
+
+### Effect of the manipulation
+```{r}
+pooled  %>% ggplot(aes(x = experimental.group, y = expertise, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank())
+```
+
+## Regression models
+```{r results='asis'}
+r4.1 <- lm(expertise  ~ perceived.independence.reversed + 
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines +
+        female +
+         healthcare +
+         poly(age, 2) +
+         country,
+                    data = pooled,
+                    na.action = na.omit)
+
+r4.2 <- stats::update(r4.1, . ~ . -
+            perceived.independence.reversed +
+            experimental.group) 
+         
+r4.3 <- stats::update(r4.1, . ~ . + 
+            benefits.vaccines:perceived.independence.reversed) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+r4.4 <- stats::update(r4.2, . ~ . + 
+            benefits.vaccines:experimental.group) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+stargazer(r4.1,
+          r4.3,
+          r4.2,
+          r4.4,
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  type = "html",
+  dep.var.labels = "Expertise",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes.append = FALSE
+)
+
+# Trust in media not yet included.
+```
+
+<br > 
+
+**Interaction effect: Perceived political independence X Benefits of vaccines**
+```{r}
+plot_model(r4.3, type = "int", mdrt.values = "meansd")
+```
 
 ## Non-interference
 
 ### Distribution of variable
+```{r}
+pooled %>%
+  ggplot(aes(noninterference, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "Relative frequencies", x = "Non-interference") +
+          facet_grid(~country, margins = TRUE) + theme_light()
+```
+
+### Effect of the manipulation
+```{r}
+pooled  %>% ggplot(aes(x = experimental.group, y = noninterference, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank())
+```
+
+## Regression models
+```{r results='asis'}
+r5.1 <- lm(noninterference  ~ perceived.independence.reversed + 
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines +
+        female +
+         healthcare +
+         poly(age, 2) +
+         country,
+                    data = pooled,
+                    na.action = na.omit)
+
+r5.2 <- stats::update(r5.1, . ~ . -
+            perceived.independence.reversed +
+            experimental.group) 
+         
+r5.3 <- stats::update(r5.1, . ~ . + 
+            benefits.vaccines:perceived.independence.reversed) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+r5.4 <- stats::update(r5.2, . ~ . + 
+            benefits.vaccines:experimental.group) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+stargazer(r5.1,
+          r5.3,
+          r5.2,
+          r5.4,
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  type = "html",
+  dep.var.labels = "Non-interference",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes.append = FALSE
+)
+
+# Trust in media not yet included.
+```
+
+<br > 
+
+**Interaction effect: Perceived political independence X Benefits of vaccines**
+```{r}
+plot_model(r5.3, type = "int", mdrt.values = "meansd")
+```
+
+
 
 ## Crebility index
 
 ### Distribution of variable
-
-
-<br>
-
-
-### Plots
-
-***Interaction effect: perceived independence x benefits of vaccines***
 ```{r}
-plot_model(reg.credibility3.centered, type = "int", mdrt.values = "meansd")[[1]]
+pooled %>%
+  ggplot(aes(credibility.index, group = country)) + 
+          geom_bar(aes(y = ..prop..), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          labs(y = "Relative frequencies", x = "Credibility index") +
+          facet_grid(~country, margins = TRUE) + theme_light()
 ```
 
-***Interaction effect: perceived independence x experimental group***
+### Effect of the manipulation
 ```{r}
-plot_model(reg.credibility3.centered, type = "int", mdrt.values = "meansd")[[2]]
+pooled  %>% ggplot(aes(x = experimental.group, y = credibility.index, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.5)) + labs(color ='Experimental group', x = "", y = "") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position = position_dodge(0.5)) +  facet_grid(.~country, margins = TRUE) +  theme_tufte() + theme(axis.text.x = element_blank(), axis.ticks = element_blank())
 ```
 
-***marginal effects: Effect of perceived independence on credibility for different age groups***
-```{r}
-plot_model(reg.credibility4.centered, type = "pred", terms = c("perceived.independence.reversedc", "age.recoded"))
+## Regression models
+```{r results='asis'}
+r6.1 <- lm(credibility.index  ~ perceived.independence.reversed + 
+         trust.EU.institutions +
+         trust.scientist +
+         trust.politicians +
+         political.ideology +
+         EU.integration +
+         interpersonal.trust +
+         familiarity.EMA +
+         familiarity.advice +
+         credibility.EMA.pre +
+         trust.health.authorities +
+         consequences.health +
+         consequences.economic +
+         importance.EMA.recoded +
+         importance.FDA.recoded +
+         importance.NRA.recoded +
+         private.providers +
+         knowledge +
+         benefits.vaccines +
+        female +
+         healthcare +
+         poly(age, 2) +
+         country,
+                    data = pooled,
+                    na.action = na.omit)
+
+r6.2 <- stats::update(r6.1, . ~ . -
+            perceived.independence.reversed +
+            experimental.group) 
+         
+r6.3 <- stats::update(r6.1, . ~ . + 
+            benefits.vaccines:perceived.independence.reversed) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+r6.4 <- stats::update(r6.2, . ~ . + 
+            benefits.vaccines:experimental.group) %>% meanCenter(centerOnlyInteractors = TRUE, centerDV = FALSE)
+
+stargazer(r6.1,
+          r6.3,
+          r6.2,
+          r6.4,
+  report = "vcsp",
+  style = "apsr",
+  omit.stat = c("ser", "f"),
+  type = "html",
+  dep.var.labels = "Credibility index",
+  initial.zero = FALSE,
+  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes.append = FALSE
+)
+
+# Trust in media not yet included.
 ```
 
+<br > 
 
-
-
-<br>
+**Interaction effect: Perceived political independence X Benefits of vaccines**
+```{r}
+plot_model(r6.3, type = "int", mdrt.values = "meansd")
+```
 
 # Remarks from participants
 

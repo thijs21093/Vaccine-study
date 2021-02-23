@@ -3,11 +3,11 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-18022021.csv") %>%
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-23022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "IE",
          check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-18022021.csv") %>%
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-23022021.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "FR",
          check = "no")
@@ -216,8 +216,8 @@ df.total <- df.total %>% mutate(knowledge = case_when(
   Q16.5 == 1 | Q16.6 == 1 ~ 0)) # Coding needs to be double-checked in Qualtrics!
 
 #create "master" dataset
-pooled <-  df.total %>%  
-  filter(IMC=="1" | age <18)
+pooled <-  df.total %>%
+  filter(IMC=="1" & age >= 18)
 
 # Add variables
 
