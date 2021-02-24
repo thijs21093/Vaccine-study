@@ -55,6 +55,7 @@ library(lavaan)
 library(semPlot)
 library(stargazer)
 library(semTools)
+library(psych)
 ```
 
 ```{r}
@@ -109,7 +110,7 @@ t3 %>%
 
 <br >
 
-Number of participants in the final dataset that failed the comprehension check:
+Number of participants in the final dataset that failed the comprehension check (complete cases only):
 ```{r}
 t4 <- pooled %>%  filter(Finished == 1) %>%
    group_by(country, comprehension.check.failed)%>%
@@ -435,7 +436,7 @@ fit.improve.adjusted %>%
 
 <br>
 
-Judging this table,  it seems that item 1 may be better assigned to the 'expertise' factor, instead of the 'non-interference' factor. Also, note the very high correlation between non-interference and expertise and the somewhat low loadings of item 2 and item 3. The next model shows what happens if item 1 is assigned to the 'expertise' factor.
+Judging from this table,  it seems that item 1 may be better assigned to the 'expertise' factor -- instead of the 'non-interference' factor. Also, note the very high correlation between non-interference and expertise and the somewhat low loadings of item 2 and item 3. The next model shows what happens if item 1 is assigned to the 'expertise' factor.
 
 <br>
 
@@ -586,42 +587,55 @@ fit.final.country <- cfa(factor.3.cfa.adjusted,
           group = "country")
 
 summary(fit.final.country, standardize=T, fit.measures=T)
-
 ```
 
 <br > 
 
 **Visualization of the model**
-```{r message=TRUE, warning=TRUE, paged.print=TRUE}
+```{r,  fig.height=4, fig.width=16}
 semPaths(fit.final.country,
          "std",
          layout = "tree2",
          nCharNodes = 0,
          nCharEdges = 0,
-         sizeMan = 8,
-         sizeLat = 20,
          intercepts = FALSE,
          curvePivot = TRUE,
-         edge.label.cex = 1.3,
-         curveAdjacent = TRUE,
+         sizeMan = 14,
+         sizeLat = 28,
+         edge.label.cex = 2,
+        label.cex = 0.8,
          style = "lisrel",
          label.scale = FALSE,
-         label.cex = 0.65,
-         nodeLabels = c(str_c("Item ",1:6), "Non-interference", "Expertise", "Stability")) 
+         nodeLabels = c(str_c("Item ",1:6), "Non-interference", "Expertise", "Stability"),
+         panelGroups = TRUE,
+         title = FALSE) 
+
 ```
+<font size="0.5">
+
+From left to right: Ireland, France, Netherlands, Sweden.
+
+</font> 
 
 <br > 
 
 **Key parameters**
 ```{r}
 parameterEstimates(fit.final.country, standardized=TRUE) %>% 
-  filter(op == "=~")  %>% 
- select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all, Country = group) %>%  
+  filter(op == "=~") %>%
+  mutate(Country = case_when(
+    group == 1 ~ "Ireland",
+    group == 2 ~ "France",
+    group == 3 ~ "Netherlands",
+    group == 4 ~ "Sweden"
+  ))  %>% 
+ select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all, Country)  %>%
      relocate(Country) %>%
-  kable(digits = 3) %>% 
+  kable(digits = 3) %>% pack_rows(
+  index = c("Ireland" = 6, "France" = 6, "Netherlands" = 6, "Sweden" =6)) %>%
     kable_styling(bootstrap_options = c("condensed","striped", "hover"),
                 full_width = F,
-                position = "left")
+                position = "left") 
 ```
 
 <br >
@@ -727,13 +741,13 @@ pooled.trust %>%
 
 ## Reliability indices
 ```{r}
-library(psych)
 alpha.trust <- alpha(pooled.trust)[[1]]
 alpha.trust %>% select(-c(average_r, median_r, `S/N`, ase)) %>% kable(col.names = c("Raw alpha",
                        "Standarized alpha",
                       "Guttman's Lambda 6",
                       "Mean of trust in EU institutions",
-                      "SD of trust in EU institutions")) %>% 
+                      "SD of trust in EU institutions"),
+                      digits = 3) %>% 
     kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
                 full_width = F,
                 position = "left")
@@ -789,7 +803,7 @@ mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
 "1. Credibility (expertise)",
 "2. Credibility (stability)",
 "3. Credibility (non-interference)",
-"4. Credibility.index",
+"4. Credibility index",
 "5. Perceived political independence",
 "6. Vaccination intention",
 "7. Trust in EU institutions",
@@ -800,7 +814,7 @@ mutate_at(vars(c("NA.prc","mean","sd","md", "skew")),funs(round(.,3))) %>%
 "12. Support for EU integration",
 "13. Interpersonal trust",
 "14. Familiarity with EMA",
-"15. FAmiliarity with EMA's opinion",
+"15. Familiarity with EMA's opinion",
 "16. Crebility of EMA (pre-manipulation)",
 "17. Crebility of EMA (post-manipulation)",
 "18. Trust in public health authorities",
@@ -938,9 +952,8 @@ tadaa_t.test(data = pooled.experiment, response = perceived.independence.reverse
 
 ### With those who failed the comprehension check filtered out (only advice/independence)
 ```{r}
-tadaa_t.test(data = pooled.experiment, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
+tadaa_t.test(data = pooled.experiment.check, response = perceived.independence.reversed, group = experimental.group, print = "markdown")
 ```
-
 
 # Time
 
@@ -994,7 +1007,7 @@ table.decision.submit <- pooled %>%
 ```{r}
 pooled %>% filter(duration < 30) %>% 
 plot_frq((duration),
-        geom.colors = alpha("red",0.8),
+        geom.colors = scales::alpha("red",0.8),
         type = "hist",
         geom.size = 0.25) +
   theme(axis.text = element_text(face = "bold",  size= 9)) + labs(title = "Total survey duration") +  scale_x_continuous(name="Time in minutes", breaks = seq(0,30, 2)) +  scale_y_continuous(expand = expansion(c(0, 0.25))) + annotate(geom = "table", x = Inf, y = Inf, label = list(table.duration))
@@ -1036,6 +1049,24 @@ plot_frq((manipulation.submit),
 
 <br>
 
+<br>
+
+*Difference in perceived independence with 30 seconds as cut-off point + number of cases per group*
+```{r}
+give.n <- function(x){
+  return(c(y = mean(x)*1.15, label = length(x))) 
+}
+
+t8 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.30,y = perceived.independence.reversed, color = experimental.group)) +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.25)) + labs(color ='Experimental group', x = "Page submission - manipulation", y = "Perceived independence") +
+    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position=position_dodge(0.25)) +  facet_grid(. ~ country, margins = TRUE) +
+  stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black") + theme_tufte() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+ggarrange(t8, common.legend = TRUE, legend = "bottom")
+```
+
+<br >
+
 *Broken down in quartiles per counry and total*
 ```{r}
 t9 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.quartile,y = perceived.independence.reversed, color = experimental.group)) +
@@ -1043,22 +1074,6 @@ t9 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.quartile,y = per
     stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position=position_dodge(0.5)) +  facet_grid(. ~ country, margins = TRUE) +  theme_tufte()
   
 ggarrange(t9, common.legend = TRUE, legend = "bottom")
-```
-
-<br>
-
-*Split dataset with 30 seconds as cut-off point*
-```{r}
-give.n <- function(x){
-  return(c(y = mean(x)*1.15, label = length(x))) 
-}
-
-t10 <- pooled.experiment  %>% ggplot(aes(x = manipulation.submit.30,y = perceived.independence.reversed, color = experimental.group)) +
-      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", alpha = 0.5, width = 0.1, size = 1, position = position_dodge(0.25)) + labs(color ='Experimental group', x = "Page submission - manipulation", y = "Perceived independence") +
-    stat_summary(fun = mean, geom = "point", alpha = 0.5, size = 2 , position=position_dodge(0.25)) +  facet_grid(. ~ country, margins = TRUE) +
-  stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black") + theme_tufte()
-  
-ggarrange(t10, common.legend = TRUE, legend = "bottom")
 ```
 
 ### Page submission - EMA's decision
@@ -1074,7 +1089,7 @@ plot_frq((decision.submit),
 
 <br>
 
-### Time and ...
+## Time and ...
 
 <br>
 
@@ -1136,7 +1151,7 @@ out.manipulation.submit <- boxplot(pooled.experiment$manipulation.submit, plot=F
 out.manipulation.submit <-pooled.experiment[-which(pooled.experiment$manipulation.submit %in% out.manipulation.submit),]
 
 out.decision.submit <- boxplot(pooled.experiment$decision.submit, plot=FALSE)$out
-out.decision.submit <-pooled[-which(pooled.experiment$decision.submit %in% out.decision.submit),]
+out.decision.submit <-pooled.experiment[-which(pooled.experiment$decision.submit %in% out.decision.submit),]
 ```
 
 ***Survey duration***
@@ -1367,7 +1382,7 @@ Not included yet.
 ## Works in healthcare sector
 ```{r}
 pooled %>% 
-  plot_frq(healthcare,
+  plot_frq(healthcare.recoded,
         ylim = c(0,nrow(pooled)+500),
         title = "") + 
   theme_blank()
@@ -1379,9 +1394,13 @@ pooled %>%
 
 ## Distribution of credibility EMA (post)
 ```{r}
-pooled %>% count(credibility.EMA.post) %>%  mutate(percentage = (n/(sum(n))*100) %>% round(2))  %>%
-  adorn_totals("row") %>%  kable(col.names = c("Credibility EMA (post)", "n", "%")) %>% 
-
+pooled %>% count(credibility.EMA.post) %>%
+  mutate(percentage = (n/(sum(n))*100))  %>%
+  adorn_totals("row") %>% 
+    kable(col.names = c("Credibility EMA (post)",
+                        "n",
+                        "%")
+          , digits = 2) %>% 
     kable_styling(bootstrap_options = c("condensed", "striped", "hover"),
                 full_width = F,
                 position = "left")
@@ -1590,14 +1609,22 @@ stargazer(r1.1,
 # Explaining vaccination intention
 
 ## Distribution of variable
+
+
+
+
 ```{r}
-pooled %>%
+pooled  %>%
   ggplot(aes(intent.vaccine, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
           labs(y = "Relative frequencies", x = "Vaccination intention") +
           facet_grid(~country, margins = TRUE) + theme_light()
 ```
+
+<br >
+This variable has been recoded. Answer categories 1 and 2 are recoded as 0. Answer caterogies 3 and 4 are recoded as 1.
+<br > 
 
 ## Regression models
 ```{r results='asis'}
@@ -1646,7 +1673,7 @@ stargazer(r2.1,
   type = "html",
   dep.var.labels = "Vaccination intention",
   initial.zero = FALSE,
-  notes = "*Notes*: Table entries are non-standardized OLS-regression coefficients, with standard errors in parentheses.",
+  notes = "*Notes*: Generalized Linear Model",
   notes.append = FALSE
 )
 
@@ -1654,7 +1681,7 @@ stargazer(r2.1,
 
 <br>
 
-# Explaning crebility of EMA's decision
+# Explaning crebility of EMA's opinion
 
 ## Stability
 
@@ -1664,7 +1691,8 @@ pooled %>%
   ggplot(aes(stability, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
-          labs(y = "Relative frequencies", x = "Stability") +
+          scale_x_continuous(breaks = NULL) +
+          labs(y = "Relative frequencies", x = "Stability") + 
           facet_grid(~country, margins = TRUE) + theme_light()
 ```
 
@@ -1744,6 +1772,7 @@ pooled %>%
   ggplot(aes(expertise, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
+          scale_x_continuous(breaks = NULL) +
           labs(y = "Relative frequencies", x = "Expertise") +
           facet_grid(~country, margins = TRUE) + theme_light()
 ```
@@ -1825,6 +1854,7 @@ pooled %>%
   ggplot(aes(noninterference, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
+          scale_x_continuous(breaks = NULL) +
           labs(y = "Relative frequencies", x = "Non-interference") +
           facet_grid(~country, margins = TRUE) + theme_light()
 ```
@@ -1908,6 +1938,7 @@ pooled %>%
   ggplot(aes(credibility.index, group = country)) + 
           geom_bar(aes(y = ..prop..), stat="count") + 
           scale_y_continuous(labels=scales::percent) +
+          scale_x_continuous(breaks = NULL) +
           labs(y = "Relative frequencies", x = "Credibility index") +
           facet_grid(~country, margins = TRUE) + theme_light()
 ```
