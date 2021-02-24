@@ -3,11 +3,11 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-23022021.csv") %>%
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-24022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "IE",
          check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-23022021.csv") %>%
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-24022021-FINAL.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
   mutate(country = "FR",
          check = "no")
@@ -296,6 +296,9 @@ age.sample.SE <- age.country %>%
 # Create subsets
 pooled.experiment <- pooled %>%  
   filter(experimental.group != "no text")
+
+pooled.experiment.check <- pooled.experiment %>%  
+  filter(comprehension.check=="1")
 
 check <-  pooled %>%  
   filter(comprehension.check=="1")
