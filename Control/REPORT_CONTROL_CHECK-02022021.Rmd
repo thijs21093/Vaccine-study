@@ -53,13 +53,10 @@ library(psych)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/NL - control check/.RData")
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/SE - control check/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/NL - control check/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/SE - control check/.RData")
 
-
-df.def.SE["error"] <- 0
-
-df.def.error <- dplyr::bind_rows(df.def.error.NL, df.def.SE)
+df.def.error <- dplyr::bind_rows(df.def.NL, df.def.SE)
 
 df.def.error <- df.def.error %>% mutate(duration.quartile = case_when(
   duration <= quantile(duration, probs = 0.25) ~ "Q1",
@@ -75,10 +72,6 @@ df.def.error$duration.quartile <- factor(df.def.error$duration.quartile, levels 
 
 df.def.error$experimental.group <- factor(df.def.error$experimental.group, levels = c("no text", "advice", "independence"))
 
-df.def <-  df.def.error %>%  
-  filter(error == 0)
-
-df.def$experimental.group <- factor(df.def$experimental.group, levels = c("no text", "advice", "independence"))
 df.def.error.NL$experimental.group <- factor(df.def.error.NL$experimental.group, levels = c("no text", "advice"))
 df.def.NL$experimental.group <- factor(df.def.NL$experimental.group, levels = c("no text", "advice"))
 df.check.NL$experimental.group <- factor(df.check.NL$experimental.group, levels = c("no text", "advice"))
@@ -90,7 +83,6 @@ df.total <- dplyr::bind_rows(df.total.NL, df.total.SE)
 df.intro <- df.def.error %>% filter(intro.submit.recoded == "> median")
 df.intro.NL <- df.intro %>% filter(country == "NL")
 df.intro.SE <- df.intro %>% filter(country == "SE")
-
 
 set_theme(
   base=theme_blank(),
@@ -127,19 +119,14 @@ Number of participants in this analysis:
 df.def.error %>% nrow()
 ```
 
-With those who received the erroneous manipulation check removed:
-```{r}
-df.def.error %>% filter(error == 0)  %>%  nrow()
-```
-
 Number of participants in the final dataset that failed the manipulation check:
 ```{r}
-df.def %>% nrow() - df.def %>% filter(manipulation.check=="1") %>% nrow()
+df.def.error %>% nrow() - df.def.error %>% filter(manipulation.check=="1") %>% nrow()
 ```
 
 Which is:
 ```{r}
-percent(df.def %>% filter(manipulation.check!="1") %>% nrow() / df.def %>% nrow(), accuracy = 0.01)
+percent(df.def.error %>% filter(manipulation.check!="1") %>% nrow() / df.def.error %>% nrow(), accuracy = 0.01)
 ```
 
 <br>
@@ -239,18 +226,6 @@ tadaa_t.test(data = df.def.error.NL, response = perceived.independence.reversed,
 ```
 
 <br>
-
-## With those who failed the manipulation check filtered out
-
-Participants that received the erroneous manipulation check are filtered out as well.
-
-### Description
-```{r}
-df.def %>% filter(manipulation.check.failed == "passed")  %>%  
-sjmisc::descr(perceived.independence.reversed, show = c("n", "NA.prc", "mean", "sd", "md", "iqr", "trimmed", "range", "skew")) %>%
-  kbl(digits= 2) %>%
- kable_paper()
-```
 
 ### Histogram
 ```{r}
@@ -825,10 +800,6 @@ tadaa_aov(credibility.noninterference ~ experimental.group, data = df.def.SE, pr
 ```{r}
 tadaa_t.test(data = df.def.error.NL, response = credibility.noninterference, group = experimental.group, print = "markdown")
 ```
-
-## Filtering out those who failed the manipulation check 
-
-Participants that received the erroneous manipulation check are filtered out as well.
 
 ### Histograms
 ```{r}

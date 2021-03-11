@@ -3,34 +3,24 @@ library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-24022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
-  mutate(country = "IE",
-         check = "no")
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-24022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
-  mutate(country = "FR",
-         check = "no")
-raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL-12022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
-  mutate(country = "NL",
-         check = "no")
-raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE-12022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
-  mutate(country = "SE",
-         check = "no") 
-raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_CONTROL_CHECK_NL-12022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>%
-  mutate(country = "NL",
-         check = "yes")
-raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_CONTROL_CHECK_SE-12022021-FINAL.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>%
-  mutate(country = "SE",
-         check = "yes")%>%
-  select(-Q19.7_2_TEXT) # This var has numeric values,
-                        # which causes an error when merging
-                        # the different dataframes. No data loss.
+raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
 
+raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>% select(-c(Q19.4_12_TEXT, Q20.4,X, Q19.4_9_TEXT, contains("StartDate")))
+
+raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, Q19.4_8_TEXT, X, contains("StartDate")))
+
+raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
+
+raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
+
+raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.7_2_TEXT, Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
+    
 # Binding dataframes
 raw.total <- bind_rows(raw.IE,
                   raw.FR,
@@ -43,6 +33,22 @@ raw.total <- bind_rows(raw.IE,
 
 # Missing data                            
 raw.total[is.na(raw.total)] <- 0 # Set NA to 0
+
+# split dataset: country & check
+## raw.IE.pid <- unique.pid %>% filter(country == "IE")
+## raw.FR.pid <- unique.pid %>% filter(country == "FR")
+## raw.NL.pid <- unique.pid %>% filter(country == "NL" & check == "no")
+## raw.NL.check.pid <- unique.pid %>% filter(country == "NL" & check == "yes")
+## raw.SE.pid <- unique.pid %>% filter(country == "SE" & check == "no")
+## raw.SE.check.pid <- unique.pid %>% filter(country == "SE" & check == "yes")
+
+# Export
+## write.csv(raw.IE.pid, file = "DATA_EN-11032021-FINAL-CORRECTED-PID.csv")
+## write.csv(raw.FR.pid, file = "DATA_FR-11032021-FINAL-CORRECTED-PID.csv")
+## write.csv(raw.NL.pid, file = "DATA_NL-11032021-FINAL-CORRECTED-PID.csv")
+## write.csv(raw.NL.check.pid, file = "DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv")
+## write.csv(raw.SE.pid, file = "DATA_SE-11032021-FINAL-CORRECTED-PID.csv")
+## write.csv(raw.SE.check.pid, file = "DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv")
 
 # Subset pc and mobile
 raw.mobile <- raw.total %>%

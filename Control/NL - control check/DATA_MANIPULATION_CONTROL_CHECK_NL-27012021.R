@@ -2,10 +2,11 @@ library(tidyverse)
 library(car)
 
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/NL - control check")
-test.NL <- read.csv("DATA_CONTROL_CHECK_NL-03022021.csv")
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/NL - control check")
+test.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) 
 test.NL[is.na(test.NL)] <- 0
-df.prep.NL <- test.NL %>% filter(Progress > 80) %>%  select(-Q19.7_2_TEXT) 
+df.prep.NL <- test.NL %>% filter(Progress > 80) %>% select(-c(Q19.7_2_TEXT,Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
 
 # Subset pc and mobile
 df.prep.mobile.NL <- df.prep.NL %>% filter(Q2.2_1>0)
@@ -50,14 +51,8 @@ df.total.NL <- df.total.NL %>% mutate(experimental.group = case_when(
 
 # Bind answers from manipulation 
 df.total.NL <- df.total.NL %>%  mutate(
-  intro.first.click = Q417_First.Click + Q10.3_First.Click,
-  intro.last.click = Q417_Last.Click + Q10.3_Last.Click,
   intro.submit = Q417_Page.Submit + Q10.3_Page.Submit,
-  intro.click.count = Q417_Click.Count + Q10.3_Click.Count,
-  manipulation.first.click =   Q10.5_First.Click,
-  manipulation.last.click =  Q10.5_Last.Click,
   manipulation.submit =  Q10.5_Page.Submit %>% na_if(0),
-  manipulation.count = Q10.5_Click.Count,
   perceived.independence = Q421 + Q10.7,
   safety = Q420 + Q10.6)
 
@@ -71,7 +66,8 @@ df.total.NL <- df.total.NL %>%
     Q298 == 3 & experimental.group == "no text" ~ 1,
     Q298 == 1 ~ 0,
     Q298 == 2 & experimental.group == "no text" ~ 0,
-    Q298 == 3 & experimental.group == "advice" ~ 0))
+    Q298 == 3 & experimental.group == "advice" ~ 0,
+    Q298 == 0 ~ NA_real_))
 
 df.total.NL <- df.total.NL %>% 
   mutate(manipulation.check.failed = case_when(
@@ -171,10 +167,7 @@ df.total.NL <- df.total.NL %>%
          importance.FDA = Q16.7_2 %>% na_if(0),
          importance.NRA = Q16.7_3 %>% na_if(0),
          private.providers = Q20.2 %>% na_if(0),
-         decision.first.click = Q14.2_First.Click %>% na_if(0),
-         decision.last.click = Q14.2_Last.Click %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         decision.click.count = Q14.2_Click.Count %>% na_if(0),
          duration = Duration..in.seconds./60 %>% na_if(0))
 
 # Knowledge
@@ -183,11 +176,8 @@ df.total.NL <- df.total.NL %>% mutate(knowledge = case_when(
   Q16.5 == 1 | Q16.6 == 1 ~ 0))
 
 # Create subsets
-df.def.error.NL <-  df.total.NL %>%  
-  filter(age >= 18 & IMC=="1")
-
 df.def.NL <-  df.total.NL %>%  
-  filter(error == 0  & age >= 18 & IMC=="1")
+  filter(age >= 18 & IMC=="1")
 
 agecut.5 <- c(-Inf, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, Inf)
 agecut.10 <- c(-Inf, 30, 40, 50, 60,  70, 80, Inf)

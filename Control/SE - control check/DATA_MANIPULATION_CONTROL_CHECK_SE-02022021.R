@@ -2,10 +2,11 @@ library(tidyverse)
 library(car)
 
 
-setwd("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/Control/SE - control check")
-test.SE <- read.csv("DATA_CONTROL_CHECK_SE-05022021.csv")
+setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Control/SE - control check")
+test.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})
 test.SE[is.na(test.SE)] <- 0
-df.prep.SE <- test.SE %>% filter(Progress > 80) %>%  select(-Q19.7_2_TEXT) 
+df.prep.SE <- test.SE %>% filter(Progress > 80) %>%  select(-c(Q19.7_2_TEXT, Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
 
 # Subset pc and mobile
 df.prep.mobile.SE  <- df.prep.SE  %>% filter(Q2.2_1>0)
@@ -52,14 +53,8 @@ df.total.SE <- df.total.SE %>% mutate(experimental.group = case_when(
 
 # Bind answers from manipulation 
 df.total.SE <- df.total.SE %>%  mutate(
-  intro.first.click = Q138_First.Click + Q10.3_First.Click + Q8.3_First.Click,
-  intro.last.click = Q138_Last.Click + Q10.3_Last.Click + Q8.3_Last.Click,
   intro.submit = Q138_Page.Submit + Q10.3_Page.Submit + Q8.3_Page.Submit ,
-  intro.click.count = Q138_Click.Count + Q10.3_Click.Count + Q8.3_Click.Count,
-  manipulation.first.click =   Q10.5_First.Click + Q8.5_First.Click,
-  manipulation.last.click =  Q10.5_Last.Click + Q8.5_Last.Click,
   manipulation.submit =  Q10.5_Page.Submit + Q8.5_Page.Submit %>% na_if(0),
-  manipulation.count = Q10.5_Click.Count + Q8.5_Click.Count,
   perceived.independence = Q142 + Q10.7 + Q8.7,
   safety = Q141 + Q10.6 + Q8.6)
 
@@ -171,10 +166,7 @@ df.total.SE <- df.total.SE %>%
          importance.FDA = Q16.7_2 %>% na_if(0),
          importance.NRA = Q16.7_3 %>% na_if(0),
          private.providers = Q20.2 %>% na_if(0),
-         decision.first.click = Q14.2_First.Click %>% na_if(0),
-         decision.last.click = Q14.2_Last.Click %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         decision.click.count = Q14.2_Click.Count %>% na_if(0),
          duration = Duration..in.seconds./60 %>% na_if(0))
 
 # Knowledge
