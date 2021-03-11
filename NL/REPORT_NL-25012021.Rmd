@@ -54,7 +54,7 @@ library(semPlot)
 ```
 
 ```{r}
-load("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/.RData")
+load("C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/.RData")
 
 set_theme(
   base=theme_blank(),
@@ -255,21 +255,21 @@ df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(manipulation.submit, 
 
 <br>
 
-*Broken down in quartiles (+ group size and SE)*
+*Broken down in quartiles (+ group size and CI)*
 ```{r}
 give.n <- function(x){
   return(c(y = mean(x)*1.13, label = length(x))) 
 }
 
-ggline(df.def, x = "manipulation.submit.quartile", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation (quartiles)",  add = "mean_se", ylim = c(3, 4.25), yticks.by = 0.25) +
+ggline(df.def, x = "manipulation.submit.quartile", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation (quartiles)",  add = "mean_ci", ylim = c(3, 4.25), yticks.by = 0.25) +
   stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
 ```
 
 <br>
 
-*Split dataset with 30 seconds as cut-off point (+ group size and SE)*
+*Split dataset with 30 seconds as cut-off point (+ group size and CI)*
 ```{r}
-ggline(df.def, x = "manipulation.submit.30", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation",  add = c("mean_se"), ylim = c(3, 4.25), yticks.by = 0.25) +
+ggline(df.def, x = "manipulation.submit.30", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation",  add = c("mean_ci"), ylim = c(3, 4.25), yticks.by = 0.25) +
   stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
 ```
 
@@ -473,7 +473,7 @@ plot_frq(age,
 
 Comparing age in sample and true population:
 ```{r}
-age.population.5 <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
+age.population.5 <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/AGE_POPULATION_SEGMENTS_NL-22012021.csv")
 age.total <- merge(age.population.5, age.sample, by.x = "ï..age", by.y = ".")
 
 age.total <- age.total %>% 
@@ -523,7 +523,7 @@ df.def %>%
 
 Compare with true population:
 
- ![Source: CBS.](C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/education.jpeg)
+ ![Source: CBS.](C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/education.jpeg)
 
 <br>
 
@@ -553,7 +553,7 @@ df.def %>%
 
 Compare with true population:
 ```{r}
-provinces <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/R data/git/NL/PROVINCES_NL-22012021.csv")
+provinces <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/git/NL/PROVINCES_NL-22012021.csv")
 
 provinces %>% 
   rename(province = ï..province)  %>% 

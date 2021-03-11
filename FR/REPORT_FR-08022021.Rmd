@@ -263,21 +263,21 @@ df.def %>% filter(manipulation.submit < 60) %>% ggplot(aes(manipulation.submit, 
 
 <br>
 
-*Broken down in quartiles (+ group size and SE)*
+*Broken down in quartiles (+ group size and CI)*
 ```{r}
 give.n <- function(x){
   return(c(y = mean(x)*1.1, label = length(x))) 
 }
 
-ggline(df.def, x = "manipulation.submit.quartile", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation (quartiles)",  add = "mean_se", ylim = c(2, 4.5), yticks.by = 0.5) +
+ggline(df.def, x = "manipulation.submit.quartile", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "Page submission - manipulation (quartiles)",  add = "mean_ci", ylim = c(2, 4.5), yticks.by = 0.5) +
   stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
 ```
 
 <br>
 
-*Split dataset with 30 seconds as cut-off point (+ group size and SE)*
+*Split dataset with 30 seconds as cut-off point (+ group size and CI)*
 ```{r}
-ggline(df.def, x = "manipulation.submit.30", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "",  add = c("mean_se"), ylim = c(2, 4), yticks.by = 0.5) +
+ggline(df.def, x = "manipulation.submit.30", y = "perceived.independence.reversed", color = "experimental.group", ylab = "Perceived independence", xlab = "",  add = "mean_ci", ylim = c(2, 4), yticks.by = 0.5) +
   stat_summary(fun.data = give.n, geom = "text", fun = median, size = 4, col = "black")
 ```
 

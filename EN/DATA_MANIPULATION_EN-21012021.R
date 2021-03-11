@@ -2,10 +2,10 @@ library(tidyverse)
 library(car)
 
 setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/EN")
-test <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-23022021.csv")
+test <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-11032021-FINAL-CORRECTED-PID.csv") %>%
+  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
 test[is.na(test)] <- 0
 df.prep <- test %>% filter(Progress > 80)
-
 
 # Encoding text
 df.prep <- dplyr::mutate_if(df.prep, is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})
@@ -55,14 +55,8 @@ df.total <- df.total %>% mutate(experimental.group = case_when(
 
 # Bind answers from manipulation 
 df.total <- df.total %>%  mutate(
-  intro.first.click = Q8.3_First.Click + Q10.3_First.Click,
-  intro.last.click = Q8.3_Last.Click + Q10.3_Last.Click,
   intro.submit = Q8.3_Page.Submit + Q10.3_Page.Submit,
-  intro.click.count = Q8.3_Click.Count + Q10.3_Click.Count,
-  manipulation.first.click = Q8.5_First.Click +  Q10.5_First.Click,
-  manipulation.last.click = Q8.5_Last.Click + Q10.5_Last.Click,
   manipulation.submit = Q8.5_Page.Submit + Q10.5_Page.Submit,
-  manipulation.count = Q8.5_Click.Count + Q10.5_Click.Count,
   perceived.independence = Q8.7 + Q10.7,
   safety = Q8.6 + Q10.6)
 
@@ -184,10 +178,7 @@ df.total <- df.total %>%
          importance.FDA = Q16.7_2 %>% na_if(0),
          importance.NRA = Q16.7_3 %>% na_if(0),
          private.providers = Q20.2 %>% na_if(0),
-         decision.first.click = Q14.2_First.Click %>% na_if(0),
-         decision.last.click = Q14.2_Last.Click %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         decision.click.count = Q14.2_Click.Count %>% na_if(0),
          duration = Duration..in.seconds./60 %>% na_if(0))
 
 
