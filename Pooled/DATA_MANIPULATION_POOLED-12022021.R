@@ -281,8 +281,6 @@ age.country <- pooled %>% group_by(country) %>%
   table() %>%
   as_tibble()
 
-
-
 age.sample.FR <- age.country %>%
   filter(country == "FR") %>% 
   mutate(percentage = n / sum(n))
