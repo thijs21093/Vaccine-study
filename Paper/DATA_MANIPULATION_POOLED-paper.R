@@ -4,31 +4,29 @@ library(car)
 
 #setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.IE <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_EN-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
 
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.FR <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_FR-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>% select(-c(Q19.4_12_TEXT, Q20.4,X, Q19.4_9_TEXT, contains("StartDate")))
 
-raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.NL <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_NL-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, Q19.4_8_TEXT, X, contains("StartDate")))
 
-raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.SE <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_SE-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
 
-raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.NL.check <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
 
-raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
+raw.SE.check <- read.csv("G:/My Drive/University/R/covid vaccine/data/DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
   dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.7_2_TEXT, Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
     
 # Binding dataframes
 raw.total <- bind_rows(raw.IE,
                   raw.FR,
                   raw.NL,
-                  raw.SE,
-                  raw.NL.check,
-                  raw.SE.check) %>%
+                  raw.SE) %>%
   select(-contains("Click")) # Some values are NA by default.
                             # I removed them to prevent errors.
 
@@ -122,7 +120,7 @@ df.total <- df.total %>%  mutate(
 df.total <- df.total %>% mutate(Q17.1 = Q17.1 %>% na_if(0)) # Set 0 to NA
 
 df.total <-df.total %>%
-  mutate(Q17.1_7_TEXT = ifelse(is.na(Q17.1), NA_real_, Q17.1_7_TEXT),
+  mutate(#Q17.1_7_TEXT = ifelse(is.na(Q17.1), NA_real_, Q17.1_7_TEXT),
          IMC =ifelse(str_detect(Q17.1_7_TEXT,c("9|Nine|nine|negen|Negen|Neuf|neuf|nittionio|Nittionio"))==T,1,0))
 
 df.total <- df.total %>% 
