@@ -35,22 +35,6 @@ raw.total <- bind_rows(raw.IE,
 # Missing data                            
 raw.total[is.na(raw.total)] <- 0 # Set NA to 0
 
-# split dataset: country & check
-## raw.IE.pid <- unique.pid %>% filter(country == "IE")
-## raw.FR.pid <- unique.pid %>% filter(country == "FR")
-## raw.NL.pid <- unique.pid %>% filter(country == "NL" & check == "no")
-## raw.NL.check.pid <- unique.pid %>% filter(country == "NL" & check == "yes")
-## raw.SE.pid <- unique.pid %>% filter(country == "SE" & check == "no")
-## raw.SE.check.pid <- unique.pid %>% filter(country == "SE" & check == "yes")
-
-# Export
-## write.csv(raw.IE.pid, file = "DATA_EN-11032021-FINAL-CORRECTED-PID.csv")
-## write.csv(raw.FR.pid, file = "DATA_FR-11032021-FINAL-CORRECTED-PID.csv")
-## write.csv(raw.NL.pid, file = "DATA_NL-11032021-FINAL-CORRECTED-PID.csv")
-## write.csv(raw.NL.check.pid, file = "DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv")
-## write.csv(raw.SE.pid, file = "DATA_SE-11032021-FINAL-CORRECTED-PID.csv")
-## write.csv(raw.SE.check.pid, file = "DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv")
-
 # Subset pc and mobile
 raw.mobile <- raw.total %>%
   filter(Q2.2_1>0)
