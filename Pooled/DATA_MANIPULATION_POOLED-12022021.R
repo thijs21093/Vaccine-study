@@ -1,27 +1,71 @@
+# Load necessary libraries
 library(tidyverse)
 library(car)
+library(qualtRics)
+
+# Read and process survey data from different countries
+
+#IE
+raw.IE <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/COVID+Vaccine+study+-+EN_02_July+24,+2024_08.55.csv",
+                       col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE) %>%
+  filter(DistributionChannel != "preview" & !is.na(pid)) 
+
+raw.IE["country"] <- "IE"
+raw.IE["check"] <- "no"
+
+# FR
+raw.FR <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/Covd+vaccine+study+-+FR_July+24,+2024_08.56.csv",
+                       col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE)  %>%
+  filter(DistributionChannel != "preview" & !is.na(pid)) 
+
+raw.FR["country"] <- "FR"
+raw.FR["check"] <- "no"
+
+#NL
+raw.NL <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_04_July+24,+2024_08.54.csv",
+                       col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE) %>%
+  filter(DistributionChannel != "preview" & !is.na(pid))
 
 
-#setwd("C:/Users/Thijs/surfdrive/COVID vaccine/git/Pooled")
+raw.NL["country"] <- "NL"
+raw.NL["check"] <- "no"
 
-raw.IE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_EN-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
+#SE
+raw.SE <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_July+24,+2024_08.57.csv",
+                       col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE)  %>%
+  filter(DistributionChannel != "preview" & !is.na(pid))
 
-raw.FR <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_FR-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>% select(-c(Q19.4_12_TEXT, Q20.4,X, Q19.4_9_TEXT, contains("StartDate")))
+raw.SE["country"] <- "SE"
+raw.SE["check"] <- "no"
 
-raw.NL <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, Q19.4_8_TEXT, X, contains("StartDate")))
+# NL check
+raw.NL.check <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_05_July+24,+2024_08.54.csv",
+                             col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE)  %>%
+  filter(DistributionChannel != "preview" & !is.na(pid)) 
 
-raw.SE <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
+raw.NL.check["country"] <- "NL"
+raw.NL.check["check"] <- "yes"
 
-raw.NL.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_NL_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.4_12_TEXT, Q20.4, X, Q19.4_8_TEXT, contains("StartDate")))
+#SE check
+raw.SE.check <- read_survey("C:/Users/boertcde/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_02_July+24,+2024_08.57.csv",
+                             col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE)  %>%
+  filter(DistributionChannel != "preview" & !is.na(pid)) 
 
-raw.SE.check <- read.csv("C:/Users/Thijs/surfdrive/COVID vaccine/Data/DATA_SE_CHECK-11032021-FINAL-CORRECTED-PID.csv") %>%
-  dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))}) %>% select(-c(Q19.7_2_TEXT, Q.20.4, Q19.4_9_TEXT, Q19.4_8_TEXT, X, contains("StartDate")))
-    
+raw.SE.check["country"] <- "SE"
+raw.SE.check["check"] <- "yes"
+
 # Binding dataframes
 raw.total <- bind_rows(raw.IE,
                   raw.FR,
@@ -29,11 +73,13 @@ raw.total <- bind_rows(raw.IE,
                   raw.SE,
                   raw.NL.check,
                   raw.SE.check) %>%
-  select(-contains("Click")) # Some values are NA by default.
-                            # I removed them to prevent errors.
+  select(-contains("Click")) %>%
+  arrange(StartDate) %>%
+  distinct(pid, .keep_all = TRUE)
 
 # Missing data                            
-raw.total[is.na(raw.total)] <- 0 # Set NA to 0
+raw.total <- raw.total %>%
+  mutate(across(where(is.numeric), ~ replace_na(., 0)))
 
 # Subset pc and mobile
 raw.mobile <- raw.total %>%
@@ -89,20 +135,21 @@ df.total <- df.total %>%
        experimental.group == "independence" ~ 0,
        experimental.group == "advice" ~ 0,
        experimental.group == "no text" ~ 1)) %>%
-  drop_na(experimental.group) # Note that this code drops all cases
+  drop_na(experimental.group) # Note that this piece of code drops all cases
                               # that stopped before the question about the perceived
                               # independence EMA.
 
 
-
 # Bind answers from manipulation 
+names(df.total) <- gsub(" ", ".", names(df.total)) 
+
 df.total <- df.total %>%  mutate(
   intro.submit = (Q8.3_Page.Submit + Q10.3_Page.Submit + Q138_Page.Submit + Q417_Page.Submit) %>% na_if(0),
   manipulation.submit = (Q8.5_Page.Submit + Q10.5_Page.Submit) %>% na_if(0),
   perceived.independence = (Q8.7 + Q10.7 + Q142 + Q421) %>% na_if(0),
   safety = (Q8.6 + Q10.6 + Q141 + Q420) %>% na_if(0))
 
-## IMCs
+# IMCs
 df.total <- df.total %>% mutate(Q17.1 = Q17.1 %>% na_if(0)) # Set 0 to NA
 
 df.total <-df.total %>%
@@ -134,13 +181,12 @@ df.total <- df.total %>%
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
          age = (Q19.2_8 + Q19.2_1) %>% na_if(0),
          healthcare = Q19.5 %>% na_if(0) %>% recode("1=1;  2=0"),
-         healthcare.recoded = Q19.5 %>% recode("1='yes';  2='no'") %>% na_if(0),
+         healthcare.recoded = healthcare %>% recode("1='yes';  0='no'"),
          native.language = Q19.9 %>% na_if(0))
 
 # Outcome variables
 df.total <- df.total %>% 
   mutate(benefits.vaccines = Q6.2_2 %>% na_if(0),
-         comments.general = Q20.6 %>% na_if(0),
          intent.vaccine = Q16.2  %>% na_if(0),
          intent.vaccine.recoded = Q16.2 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
          credibility.item1 = Q15.2 %>% na_if(0),
@@ -196,7 +242,7 @@ df.total <- df.total %>%
          importance.NRA.recoded = Q16.7_3 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
          private.providers = Q20.2 %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         duration = Duration..in.seconds./60 %>% na_if(0),
+         duration = `Duration.(in.seconds)`/60 %>% na_if(0),
          trust.EU.institutions = rowMeans(cbind(trust.EC,
                         trust.EP,
                         trust.council), na.rm=T))
@@ -307,3 +353,5 @@ FR <-  pooled %>%
 # Save data     
 save.image()
 
+# Write csv
+write.csv(pooled, "C:/Users/boertcde/Documents/ema_study_check/data/out/pooled-24072024.csv")
