@@ -87,7 +87,7 @@ raw.mobile <- raw.total %>%
 raw.pc<- raw.total %>%
   filter(Q3.2_1>0)
 raw.unknown <- raw.total %>%
-  filter(Q3.2_1==0 & Q2.2_1==0) # "unknown" are responses that stopped before Q3.2_1==0 or Q2.2_1==0.
+  filter(Q3.2_1==0 & Q2.2_1==0) # "unknown" are responses that stopped before Q3.2_1 or Q2.2_1.
 
 # Add tag
 raw.pc["device"] <- "pc"
@@ -122,7 +122,7 @@ df.total <- df.total %>%
   mutate(experimental.group = case_when(
   Q8.7 > 0  ~ "independence",
   Q10.7 > 0 ~ "advice",
-  Q421 > 0 | Q142 > 0 ~ "no text")) %>%
+  Q421 > 0 | Q142 > 0 ~ "no text")) %>% # Q142 = SE / Q421 = NL
      mutate(independence = case_when(
           experimental.group == "independence" ~ 1,
           experimental.group == "advice" ~ 0,
@@ -169,7 +169,7 @@ df.total <- df.total %>%
    check == "yes" & country == "NL" & Q298 == 3 & experimental.group == "no text" ~ 1,
    
    Q298 == 0 ~ NA_real_,
-   TRUE ~ 0)) # Coding needs to be double-checked in Qualtrics!
+   TRUE ~ 0))
 
 df.total <- df.total %>% 
   mutate(comprehension.check.failed = case_when(
@@ -183,7 +183,6 @@ df.total <- df.total %>%
          healthcare = Q19.5 %>% na_if(0) %>% recode("1=1;  2=0"),
          healthcare.recoded = healthcare %>% recode("1='yes';  0='no'"), # Warning can be safely ignored
          native.language = Q19.9 %>% na_if(0))
-
 
 # Outcome variables and perceived independence
 df.total <- df.total %>% 
@@ -245,13 +244,14 @@ df.total <- df.total %>%
          )
 
 # Knowledge
-df.total <- df.total %>% mutate(knowledge = case_when(
-  Q16.5 == 2 & Q16.6 == 2 ~ 1,
-  Q16.5 == 1 | Q16.6 == 1 ~ 0)) # Coding needs to be double-checked in Qualtrics!
+df.total <- df.total %>% 
+  mutate(knowledge = case_when(
+      Q16.5 == 2 & Q16.6 == 2 ~ 1,
+      Q16.5 == 1 | Q16.6 == 1 ~ 0)) 
 
 # Create "master" dataset
 pooled <-  df.total %>%
-  filter(IMC == "1" & # IMC passed succesfully
+  filter(IMC == "1" & # IMC passed successfully
            age >= 18 & # 18 years or older
            timer_total_minutes >= 3) # Survey completed in more than 3 minutes
 
