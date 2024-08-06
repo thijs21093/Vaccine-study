@@ -87,7 +87,7 @@ raw.mobile <- raw.total %>%
 raw.pc<- raw.total %>%
   filter(Q3.2_1>0)
 raw.unknown <- raw.total %>%
-  filter(Q3.2_1==0 & Q2.2_1==0) # "unknown" are cases that stopped before Q3.2_1==0 or Q2.2_1==0.
+  filter(Q3.2_1==0 & Q2.2_1==0) # "unknown" are responses that stopped before Q3.2_1==0 or Q2.2_1==0.
 
 # Add tag
 raw.pc["device"] <- "pc"
@@ -181,39 +181,38 @@ df.total <- df.total %>%
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
          age = (Q19.2_8 + Q19.2_1) %>% na_if(0),
          healthcare = Q19.5 %>% na_if(0) %>% recode("1=1;  2=0"),
-         healthcare.recoded = healthcare %>% recode("1='yes';  0='no'"),
+         healthcare.recoded = healthcare %>% recode("1='yes';  0='no'"), # Warning can be safely ignored
          native.language = Q19.9 %>% na_if(0))
 
-# Outcome variables
+
+# Outcome variables and perceived independence
 df.total <- df.total %>% 
   mutate(benefits.vaccines = Q6.2_2 %>% na_if(0),
+         
          intent.vaccine = Q16.2  %>% na_if(0),
-         intent.vaccine.recoded = Q16.2 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
+         intent.vaccine.recoded = (intent.vaccine-1)/(4-1),
+         
          credibility.item1 = Q15.2 %>% na_if(0),
          credibility.item2.reversed = Q15.3 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item3.reversed = Q15.4 %>% recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          credibility.item4 = Q15.5 %>% na_if(0),
          credibility.item5 = Q15.6 %>% na_if(0),
          credibility.item6 = Q15.7 %>% na_if(0),
-         stability = Q15.7 %>% na_if(0)) 
-  
-# Credibility index
-df.total <- df.total %>% 
-  mutate(
-    expertise =
-      rowMeans(cbind(credibility.item4,
-                     credibility.item5), na.rm=T),
-    noninterference =
-      rowMeans(cbind(credibility.item1,
-                     credibility.item2.reversed,
-                     credibility.item3.reversed), na.rm=T),
-    credibility.index =
-      rowMeans(cbind(credibility.item1,
-                     credibility.item2.reversed,
-                     credibility.item3.reversed,
-                     credibility.item4,
-                     credibility.item5,
-                     credibility.item6), na.rm=T))
+         
+         noninterference.recoded = (credibility.item2.reversed + credibility.item3.reversed - 1) / (14 - 1),
+         expertise.recoded = (credibility.item1 + credibility.item4 + credibility.item5 - 1) / (21 - 1),
+         stability.recoded = (credibility.item6 - 1) / (7 - 1),
+         
+         credibility.index = (credibility.item1 +
+                              credibility.item2.reversed +
+                              credibility.item3.reversed + 
+                              credibility.item4 +
+                              credibility.item5 +
+                              credibility.item6 - 1) / (42 - 1),
+         
+         perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
+         perceived.independence.reversed.recoded = (perceived.independence.reversed - 1) / (7 - 1)
+         )
 
 # controls
 df.total <- df.total %>%
@@ -231,7 +230,6 @@ df.total <- df.total %>%
          credibility.EMA.pre = Q3.3_2 %>% na_if(0),
          credibility.EMA.post = (Q160 + Q140 + Q86) %>% na_if(0),
          trust.health.authorities = Q6.4 %>% na_if(0),
-         perceived.independence.reversed = perceived.independence %>% car::recode("7=1; 6=2; 5=3; 4=4; 3=5; 2=6; 1=7") %>% na_if(0),
          consequences.health = Q6.3_1 %>% na_if(0),
          consequences.economic =  Q6.3_2 %>% na_if(0),
          importance.EMA = Q16.7_1 %>% na_if(0),
@@ -242,19 +240,20 @@ df.total <- df.total %>%
          importance.NRA.recoded = Q16.7_3 %>% na_if(0) %>% recode("1=0; 2=0; 3=1; 4=1"),
          private.providers = Q20.2 %>% na_if(0),
          decision.submit = Q14.2_Page.Submit %>% na_if(0),
-         duration = `Duration.(in.seconds)`/60 %>% na_if(0),
-         trust.EU.institutions = rowMeans(cbind(trust.EC,
-                        trust.EP,
-                        trust.council), na.rm=T))
+         timer_total_minutes = `Duration.(in.seconds)`/60  %>% na_if(0),
+         trust.EU.institutions = rowMeans(cbind(trust.EC, trust.EP, trust.council), na.rm=T)
+         )
 
 # Knowledge
 df.total <- df.total %>% mutate(knowledge = case_when(
   Q16.5 == 2 & Q16.6 == 2 ~ 1,
   Q16.5 == 1 | Q16.6 == 1 ~ 0)) # Coding needs to be double-checked in Qualtrics!
 
-#create "master" dataset
+# Create "master" dataset
 pooled <-  df.total %>%
-  filter(IMC=="1" & age >= 18)
+  filter(IMC == "1" & # IMC passed succesfully
+           age >= 18 & # 18 years or older
+           timer_total_minutes >= 3) # Survey completed in more than 3 minutes
 
 # Add variables
 
