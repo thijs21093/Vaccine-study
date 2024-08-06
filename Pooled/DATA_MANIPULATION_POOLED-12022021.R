@@ -353,6 +353,6 @@ FR <-  pooled %>%
 save.image()
 
 # Write csv
-write.csv(pooled, "C:/Users/boertcde/Documents/ema_study_check/data/out/pooled-24072024.csv")
+write.csv(pooled, "C:/Users/boertcde/Documents/ema_study_check/data/out/pooled-06082024.csv")
 
 # End of script
