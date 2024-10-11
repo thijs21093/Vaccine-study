@@ -1,3 +1,9 @@
-# Vaccine-study
+# Independence, credibility and regulatory compliance
 
-Experimental survey study.
+Working title: Testing the Relationship Between Independence, Regulatory Credibility and Compliance: Evidence from a Survey Experiment in Four EU Countries on COVID-19 Vaccine Authorization 
+
+Abstract: The effectiveness of regulatory policy in many areas depends on citizens adhering to the advice of regulatory bodies. This in turn depends on whether they perceive these recommendations as credible. One of the biggest threats to regulatory credibility is the concern that recommendations are tainted by short-term political interests. Consequently, regulation literature argues that endowing regulators with independence secures regulatory credibility, thus enhances citizens’ compliance with regulatory advice. However, extant research provides us with little empirical evidence for this theoretical assumption. We put the assumption to rigorous empirical testing, utilizing a case that is a prime example of reliance on credibility in regulatory decision-making: the conditional marketing authorization of the first COVID-19 vaccine in the European Union (EU), following the European Medicines Agency’s (EMA) risk assessment. We conducted a pre-registered survey study with 4,000 EU citizens from four countries (the Netherlands, Sweden, Ireland and France), only a few weeks after the approval of the vaccine and before its distribution. We examine the hypothesized link both observationally and experimentally. The results provide partial support that independence is beneficial to regulatory credibility and in extension, regulatory compliance. Citizens that perceive EMA as more independent did find its opinion to be more credible and were more willing to take the vaccine. However, observed correlations are relatively weak and our experimental tests did not yield sufficient evidence supporting our hypothesis.  
+
+Keywords: agency independence; regulatory credibility; agencies; regulation; experiments; COVID-19.  
+
+Pre-registration: https://osf.io/tp648
