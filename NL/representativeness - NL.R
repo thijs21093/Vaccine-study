@@ -3,7 +3,8 @@ library(dplyr)
 library(tidyr)
 library(flextable)
 library(officer)
-
+library(readr)
+library(car)
 
 # Load data
 setwd("~/ema_study_check/code/Vaccine-study/NL")
@@ -12,7 +13,7 @@ load("~/ema_study_check/code/Vaccine-study/pooled.RData")
 rm(list=setdiff(ls(), "NL"))
 
 # Load CBS data
-province <- read_delim("~/ema_study_check/data/NL CBS/Province NL.csv", 
+province <- read_delim("~/ema_study_check/data/NL stats/province NL.csv", 
                        delim = ";",
                        escape_double = FALSE,
                        col_types = cols(Country_mean = col_number()),
@@ -21,7 +22,7 @@ province <- read_delim("~/ema_study_check/data/NL CBS/Province NL.csv",
   select(Variable, Country_mean) %>%
   drop_na()
 
-education <- read_delim("~/ema_study_check/data/NL CBS/Education NL.csv", 
+education <- read_delim("~/ema_study_check/data/NL stats/education NL.csv", 
                        delim = ";",
                        escape_double = FALSE,
                        col_types = cols(Country_mean = col_number()),
@@ -34,7 +35,7 @@ combined <- bind_rows(province, education)
 
 # Recode variables
 NL2 <-NL %>% 
-  mutate(education = Q19.4 %>% recode("1='1. VMBO/Mavo';
+  mutate(education = Q19.4 %>% car::recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
                                       3='3. Vwo';
                                       4='4. MBO';
@@ -44,7 +45,7 @@ NL2 <-NL %>%
                                       8='8. WO Master of hoger';
                                       9='9. Anders';
                                       0=NA"),
-         education.recoded = Q19.4 %>% recode("1='Pre-vocational secondary education';
+         education.recoded = Q19.4 %>% car::recode("1='Pre-vocational secondary education';
                                       2='Senior general secondary education, pre-university education or vocational education';
                                       3='Senior general secondary education, pre-university education or vocational education';
                                       4='Senior general secondary education, pre-university education or vocational education';
@@ -54,7 +55,7 @@ NL2 <-NL %>%
                                       8='Master/doctoral';
                                       9='Do not know/Unknown/Other';
                                       0=NA"),
-         income = Q19.6  %>% recode("2='<20K';
+         income = Q19.6  %>% car::recode("2='<20K';
                                     3='20K-25K';
                                     4='25K-30K';
                                     5='30K-35K';
@@ -63,7 +64,7 @@ NL2 <-NL %>%
                                     8='45K-50K';
                                     9='50K>';
                                     0=NA"),
-         province = Q19.8 %>% recode("2='Noord-Holland';
+         province = Q19.8 %>% car::recode("2='Noord-Holland';
                                       3='Zuid-Holland';
                                       4='Groningen';
                                      5='Friesland';
