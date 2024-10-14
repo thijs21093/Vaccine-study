@@ -2,18 +2,39 @@
 library(dplyr)
 library(tidyr)
 library(flextable)
+library(officer)
+
 
 # Load data
 setwd("~/ema_study_check/code/Vaccine-study/NL")
-load("~/ema_study_check/code/Vaccine-study/.RData")
+load("~/ema_study_check/code/Vaccine-study/pooled.RData")
 
 rm(list=setdiff(ls(), "NL"))
 
+# Load CBS data
+province <- read_delim("~/ema_study_check/data/NL CBS/Province NL.csv", 
+                       delim = ";",
+                       escape_double = FALSE,
+                       col_types = cols(Country_mean = col_number()),
+                       locale = locale(decimal_mark = ","),
+                       trim_ws = TRUE) %>%
+  select(Variable, Country_mean) %>%
+  drop_na()
 
-NL %>% group_by(female) %>% count()
+education <- read_delim("~/ema_study_check/data/NL CBS/Education NL.csv", 
+                       delim = ";",
+                       escape_double = FALSE,
+                       col_types = cols(Country_mean = col_number()),
+                       locale = locale(decimal_mark = ","),
+                       trim_ws = TRUE) %>%
+  select(Variable, Country_mean) %>%
+  drop_na()
 
+combined <- bind_rows(province, education)
+
+# Recode variables
 NL2 <-NL %>% 
-  mutate(education = Q19.4 %>% Recode("1='1. VMBO/Mavo';
+  mutate(education = Q19.4 %>% recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
                                       3='3. Vwo';
                                       4='4. MBO';
@@ -23,15 +44,15 @@ NL2 <-NL %>%
                                       8='8. WO Master of hoger';
                                       9='9. Anders';
                                       0=NA"),
-         education.recoded = Q19.4 %>% Recode("1='1. VMBO/Mavo';
-                                      2='2. Havo';
-                                      3='3. Vwo';
-                                      4='4. MBO';
-                                      5='5. HBO';
-                                      6='6. WO';
-                                      7='5. HBO';
-                                      8='6. WO';
-                                      9= '7. Anders';
+         education.recoded = Q19.4 %>% recode("1='Pre-vocational secondary education';
+                                      2='Senior general secondary education, pre-university education or vocational education';
+                                      3='Senior general secondary education, pre-university education or vocational education';
+                                      4='Senior general secondary education, pre-university education or vocational education';
+                                      5='Bachelor';
+                                      6='Bachelor';
+                                      7='Master/doctoral';
+                                      8='Master/doctoral';
+                                      9='Do not know/Unknown/Other';
                                       0=NA"),
          income = Q19.6  %>% recode("2='<20K';
                                     3='20K-25K';
@@ -52,19 +73,18 @@ NL2 <-NL %>%
                                      9='Gelderland';
                                      10='Utrecht';
                                      11='Zeeland';
-                                     12='Noord-Branbant';
+                                     12='Noord-Brabant';
                                      13='Limburg';
                                      0=NA"))
 
 
-# Step 1: Convert the 'education.recoded' variable to a factor and remove 1., 2., etc.
+# Convert the 'education.recoded' variable to a factor
 NL2 <- NL2 %>%
   mutate(education.factor = as.factor(education.recoded),
   province.factor = as.factor(province))
 
-NL2$education.factor <- gsub("^.{0,3}", "", NL2$education.recoded)
 
-# Step 2: Create binary columns for each category in 'education.recoded'
+# Create binary columns for each category in 'education.recoded'
 education_wide <- NL2 %>%
   select(education.factor) %>%
   drop_na() %>%
@@ -77,7 +97,7 @@ education_wide <- NL2 %>%
   mutate(across(where(is.numeric), ~replace_na(., 0)))   %>% 
   select(-id)  # Remove the ID column if not needed
 
-# Step 3: Create binary columns for each category in 'province'
+# Create binary columns for each category in 'province'
 province_wide <- NL2 %>%
   select(province.factor) %>%
   drop_na() %>%
@@ -91,7 +111,7 @@ province_wide <- NL2 %>%
   select(-id)  # Remove the ID column if not needed
 
 
-# Step 4: Create summary table for province and education
+# Create summary table for province and education
 province_sum <- province_wide %>%
   reframe(across(where(is.numeric), list(
     Min = ~min(.x, na.rm = TRUE),
@@ -104,6 +124,12 @@ province_sum <- province_wide %>%
                names_pattern = "(.*)_(.*)") %>%
   select(Variable, Min, Max, Mean, Stddev)
 
+x <- c("Pre-vocational secondary education",
+       "Senior general secondary education, pre-university education or vocational education",
+       "Bachelor",
+       "Master/doctoral",
+       "Do not know/Unknown/Other")
+
 education_sum <- education_wide %>%
   reframe(across(where(is.numeric), list(
     Min = ~min(.x, na.rm = TRUE),
@@ -114,11 +140,11 @@ education_sum <- education_wide %>%
   pivot_longer(cols = everything(), 
                names_to = c("Variable", ".value"), 
                names_pattern = "(.*)_(.*)") %>%
-  select(Variable, Min, Max, Mean, Stddev)
+  select(Variable, Min, Max, Mean, Stddev) %>%
+  slice(match(x, Variable))
 
 
-
-# Step 5: Summarize age and gender
+# Summarize age and gender
 summary_tables_other <- NL2 %>%
   reframe(
     Variable = c("Age", "Female"),
@@ -128,46 +154,45 @@ summary_tables_other <- NL2 %>%
     Stddev = c(sd(age, na.rm = TRUE), sd(female, na.rm = TRUE))
   )
 
-# Step 6: Add all tables together and add label
+# Add all tables together and add label
 all_sum_tables <- bind_rows(summary_tables_other, province_sum, education_sum)%>%
   mutate(Category = case_when(
-    Variable %in% c("Noord-Branbant", "Groningen", "Utrecht", "Noord-Holland", "Zeeland", 
+    Variable %in% c("Noord-Brabant", "Groningen", "Utrecht", "Noord-Holland", "Zeeland", 
                     "Overijssel", "Gelderland", "Zuid-Holland", "Flevoland", 
                     "Limburg", "Drenthe", "Friesland") ~ "Province",
-    Variable %in% c("VMBO/Mavo", "HBO", "WO", "MBO", "Havo", "Vwo", "Anders") ~ "Education",
+    Variable %in% x ~ "Education",
     TRUE ~ ""
   )) %>% relocate(Category)
 
 all_sum_tables <- all_sum_tables %>%
+  left_join(combined)  %>%
   mutate(Country_mean = case_when(
     Variable == "Age" ~ 49.55946586,
     Variable == "Female" ~ 0.502928199,
-    TRUE ~ 0
-  )) %>%
+    TRUE ~ Country_mean)) %>%
   mutate(across(where(is.numeric), ~ round(., 2)))
 
 
-
+# Create table
 ft <- flextable(all_sum_tables) %>%
-  set_header_labels(Variable = "Variable", Min = "Min", Max = "Max", Mean = "Mean", Stddev = "Std. Deviation", Country_mean = "Netherlands (mean)", Category = "") %>%
+  set_header_labels(Variable = "Variable", Min = "Min", Max = "Max", Mean = "Mean", Stddev = "Std. Deviation", Country_mean = "Netherlands
+                    (mean)", Category = "") %>%
   merge_v(j = "Category") %>%  # Merge the Category column for grouping
   theme_vanilla() %>%  # Apply a clean theme
   align(j = "Category", align = "left", part = "body") %>%
-  align(j = c("Min", "Max", "Mean", "Stddev"), align = "center", part = "body")  %>%
+  align(j = c("Min", "Max", "Mean", "Stddev", "Country_mean"), align = "center", part = "body")  %>%
   
   # Add a title to the table
   set_caption(caption = "TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Netherlands, N=1317).") %>%
   
   # Add a footnote
-  add_footer_lines(values = "Source: aStatistics Netherlands, 2021, Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio, https://opendata.cbs.nl/#/CBS/nl/dataset/03759ned/table?dl=AE555.
-                                     b
-
- .")
+  add_footer_lines(values = "Source: aStatistics Netherlands, 2021, Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio, https://opendata.cbs.nl/#/CBS/nl/dataset/03759ned/table?dl=AE555. bStatistics Netherlands, 2021, Bevolking; hoogstbehaald onderwijsniveau en onderwijsrichting, https://opendata.cbs.nl/#/CBS/nl/dataset/85313NED/table?dl=AE647. Note: Mean age for the Dutch population pertains to the adult population (18 years and older). The answer options in the survey differ somewhat from the categorisation used by Netherlands Statistics. Comparison should be made cautiously.")
 
 ft
 
-# Step 3: Export to a Word document
+# Export to a Word document
 doc <- read_docx() %>%
   body_add_flextable(ft)
 
 
+print(doc, target = paste0(getwd(), "/NL table out.docx"))
