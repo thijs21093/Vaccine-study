@@ -35,6 +35,7 @@ combined <- bind_rows(province, education)
 
 # Recode variables
 NL2 <-NL %>% 
+  filter(check == "no") %>%
   mutate(education = Q19.4 %>% car::recode("1='1. VMBO/Mavo';
                                       2='2. Havo';
                                       3='3. Vwo';
@@ -184,7 +185,7 @@ ft <- flextable(all_sum_tables) %>%
   align(j = c("Min", "Max", "Mean", "Stddev", "Country_mean"), align = "center", part = "body")  %>%
   
   # Add a title to the table
-  set_caption(caption = "TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Netherlands, N=1317).") %>%
+  set_caption(caption = paste0("TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Netherlands, N=", NL2 %>% count(),").")) %>%
   
   # Add a footnote
   add_footer_lines(values = "Source: aStatistics Netherlands, 2021, Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio, https://opendata.cbs.nl/#/CBS/nl/dataset/03759ned/table?dl=AE555. bStatistics Netherlands, 2021, Bevolking; hoogstbehaald onderwijsniveau en onderwijsrichting, https://opendata.cbs.nl/#/CBS/nl/dataset/85313NED/table?dl=AE647. Note: Mean age for the Dutch population pertains to the adult population (18 years and older). The answer options in the survey differ somewhat from the categorisation used by Netherlands Statistics. Comparison should be made cautiously.")

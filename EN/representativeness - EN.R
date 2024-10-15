@@ -219,7 +219,7 @@ ft <- flextable(all_sum_tables) %>%
   align(j = c("Min", "Max", "Mean", "Stddev", "Country_mean"), align = "center", part = "body")  %>%
   
   # Add a title to the table
-  set_caption(caption = "TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Ireland, N=980).") %>%
+  set_caption(caption = paste0("TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Ireland, N=", IE2 %>% count(),").")) %>%
   
   # Add a footnote
   add_footer_lines(values = "Source: aCentral Statistics Office, Ireland, 2021, Population estimates from 1926, https://data.cso.ie/table/PEA11.

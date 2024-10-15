@@ -36,6 +36,7 @@ combined <- bind_rows(province, education)
 
 # Recode variables
 SE2 <-SE %>% 
+  filter(check == "no") %>%
   mutate(education.recoded = Q19.4 %>%
   car::recode("1='Primary and secondary education less than 9 years';
         2='Primary and secondary education 9-10 years';
@@ -194,7 +195,7 @@ ft <- flextable(all_sum_tables) %>%
   align(j = c("Min", "Max", "Mean", "Stddev", "Country_mean"), align = "center", part = "body")  %>%
   
   # Add a title to the table
-  set_caption(caption = "TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Sweden, N=1446).") %>%
+  set_caption(caption = paste0("TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (Sweden, N=", SE2 %>% count(),").")) %>%
   
   # Add a footnote
   add_footer_lines(values = "Source: aStatistics Sweden, 2021, Folkmängden efter region, civilstånd, ålder och kön. År 1968 - 2023, https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101A/BefolkningNy/.

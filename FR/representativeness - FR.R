@@ -173,7 +173,7 @@ ft <- flextable(all_sum_tables) %>%
   align(j = c("Min", "Max", "Mean", "Stddev", "Country_mean"), align = "center", part = "body")  %>%
   
   # Add a title to the table
-  set_caption(caption = "TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (France, N=986).") %>%
+  set_caption(caption = paste0("TABLE XX Summary Statistics of the Experimental Sample and Mean Values for the General Population (France, N=", FR2 %>% count(),").")) %>%
   
   # Add a footnote
   add_footer_lines(values = "Source: aNational Institute of Statistics and Economic Studies, 2021, Age structure of the population: Demographic balance sheet 2021, https://www.insee.fr/en/statistiques/6040016.
