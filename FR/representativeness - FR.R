@@ -17,7 +17,7 @@ province <- read_delim("~/ema_study_check/data/FR stats/province FR.csv",
                        delim = ";",
                        escape_double = FALSE,
                        col_types = cols(Country_mean = col_number()),
-                       locale = locale(decimal_mark = ","),
+                       locale = locale(decimal_mark = ",", encoding = "WINDOWS-1252"),
                        trim_ws = TRUE) %>%
   select(Variable, Country_mean) %>%
   drop_na()
@@ -26,7 +26,7 @@ education <- read_delim("~/ema_study_check/data/FR stats/education FR.csv",
                        delim = ";",
                        escape_double = FALSE,
                        col_types = cols(Country_mean = col_number()),
-                       locale = locale(decimal_mark = ","),
+                       locale = locale(decimal_mark = ",", encoding = "WINDOWS-1252"),
                        trim_ws = TRUE) %>%
   select(Variable, Country_mean) %>%
   drop_na()
@@ -35,7 +35,7 @@ combined <- bind_rows(province, education)
 
 # Recode variables
 FR2 <-FR %>% 
-  mutate(education = Q19.4 %>%
+  mutate(education.recoded = Q19.4 %>%
          car::recode("1='Less than primary, primary and lower secondary education';
          2='Less than primary, primary and lower secondary education';
          3='Upper secondary and post-secondary non-tertiary education';
@@ -45,14 +45,14 @@ FR2 <-FR %>%
          7='Tertiary education';
          8='Other'"),
          province = Q19.8 %>% na_if(0) %>%
-          recode("1 = 'Auvergne-Rhônes-Alpes';
+         car::recode("1 = 'Auvergne-Rhône-Alpes';
                   2 = 'Bourgogne-Franche-Comté';
                   3 = 'Bretagne';
                   4 = 'Centre-Val de Loire';
                   5 = 'Corse';
-                  6 = 'Grande Est';
+                  6 = 'Grand Est';
                   7 = 'Hauts-de-France';
-                  8 = 'Ile-de-France';
+                  8 = 'Île-de-France';
                   9 = 'Normandie';
                   10 = 'Nouvelle-Aquitaine';
                   11 = 'Occitanie';
@@ -108,8 +108,7 @@ province_sum <- province_wide %>%
 
 x <- c('Less than primary, primary and lower secondary education',
        'Upper secondary and post-secondary non-tertiary education',
-       'Tertiary education',
-       'Other')
+       'Tertiary education')
 
 education_sum <- education_wide %>%
   reframe(across(where(is.numeric), list(
@@ -138,14 +137,14 @@ summary_tables_other <- FR2 %>%
 # Add all tables together and add label
 all_sum_tables <- bind_rows(summary_tables_other, province_sum, education_sum)%>%
   mutate(Category = case_when(
-    Variable %in% c('Auvergne-Rhônes-Alpes',
+    Variable %in% c('Auvergne-Rhône-Alpes',
                     'Bourgogne-Franche-Comté',
                     'Bretagne',
                     'Centre-Val de Loire',
                     'Corse',
-                    'Grande Est',
+                    'Grand Est',
                     'Hauts-de-France',
-                    'Ile-de-France',
+                    'Île-de-France',
                     'Normandie',
                     'Nouvelle-Aquitaine',
                     'Occitanie',
@@ -178,7 +177,9 @@ ft <- flextable(all_sum_tables) %>%
   
   # Add a footnote
   add_footer_lines(values = "Source: aNational Institute of Statistics and Economic Studies, 2021, Age structure of the population: Demographic balance sheet 2021, https://www.insee.fr/en/statistiques/6040016.
-                            Note: Mean age for the Dutch population pertains to the adult population (18 years and older). The answer options in the survey differ somewhat from the categorisation used by Netherlands Statistics. Comparison should be made cautiously.")
+                                    bNational Institute of Statistics and Economic Studies, 2021, Estimations de population, https://www.insee.fr/en/statistiques/6040016.
+                                    cNational Institute of Statistics and Economic Studies, 2021, Formation et diplômes, https://catalogue-donnees.insee.fr/fr/explorateur/DS_RP_FORMATION_PRINC
+                            Note: Mean age for the French population pertains to the adult population (18 years and older). ")
 
 ft
 
@@ -187,4 +188,4 @@ doc <- read_docx() %>%
   body_add_flextable(ft)
 
 
-print(doc, target = paste0(getwd(), "/NL table out.docx"))
+print(doc, target = paste0(getwd(), "/FR table out.docx"))
