@@ -4,3 +4,5 @@
 .RData
 .Ruserdata
 *.png
+check demographic vars.R
+analytic_sample.csv
