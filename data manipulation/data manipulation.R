@@ -3,14 +3,13 @@ library(tidyverse)
 library(car)
 library(qualtRics)
 
-
 setwd("~/ema_study_check/code/Vaccine-study")
 # Read and process survey data from different countries
 
 #IE
 raw.IE <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+EN_02_July+24,+2024_08.55.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE) %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -20,7 +19,7 @@ raw.IE["check"] <- "no"
 # FR
 raw.FR <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covd+vaccine+study+-+FR_July+24,+2024_08.56.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -30,7 +29,7 @@ raw.FR["check"] <- "no"
 #NL
 raw.NL <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_04_July+24,+2024_08.54.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE) %>%
   filter(DistributionChannel != "preview" & !is.na(pid))
 
@@ -41,7 +40,7 @@ raw.NL["check"] <- "no"
 #SE
 raw.SE <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_July+24,+2024_08.57.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid))
 
@@ -51,7 +50,7 @@ raw.SE["check"] <- "no"
 # NL check
 raw.NL.check <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_05_July+24,+2024_08.54.csv",
                              col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -61,7 +60,7 @@ raw.NL.check["check"] <- "yes"
 #SE check
 raw.SE.check <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_02_July+24,+2024_08.57.csv",
                              col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  arrange(StartDate) %>%
+  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -181,10 +180,42 @@ df.total <- df.total %>%
 # Demographics
 df.total <- df.total %>% 
   mutate(female = Q19.3 %>% Recode("1=0;2=1;3=NA; 0=NA"),
+         migration_background = Q19.10 %>% na_if(0)%>% recode("1=0; 2=1; 3=1"),
          age = (Q19.2_8 + Q19.2_1) %>% na_if(0),
          healthcare = Q19.5 %>% na_if(0) %>% recode("1=1;  2=0"),
          healthcare.recoded = healthcare %>% recode("1='yes';  0='no'"), # Warning can be safely ignored
-         native.language = Q19.9 %>% na_if(0))
+         native.language = Q19.9 %>% na_if(0),
+         income =
+           case_when(
+             country == "NL" ~ Q19.6-1, # NL and IE have range 2-9
+             country == "IE" ~ Q19.6-1,
+             TRUE ~ Q19.6
+           ) %>% na_if(0),
+         Q19.4 = Q19.4 %>% na_if(0),
+         higher.education = 
+           case_when(country == "FR" & Q19.4 == 5 ~ 1, # o	Diplôme de niveau bac + 3 ou bac + 4
+                     country == "FR" & Q19.4 == 6 ~ 1, # o	Diplôme de niveau bac + 5 ou plus
+                     country == "FR" & Q19.4 == 8 ~ NA, # o	Autre:  
+                     
+                     country == "NL" & Q19.4 == 5 ~ 1, # o	HBO Bachelor  
+                     country == "NL" & Q19.4 == 6 ~ 1, # o	WO Bachelor  
+                     country == "NL" & Q19.4 == 7 ~ 1, # o	HBO Master  
+                     country == "NL" & Q19.4 == 8 ~ 1, # o	WO Master of hoger
+                     country == "NL" & Q19.4 == 9 ~ NA, # o	Anders:  
+                     
+                     country == "IE" & Q19.4 == 6 ~ 1, # o	Ordinary bachelor degree/professional qualification or both
+                     country == "IE" & Q19.4 == 7 ~ 1, # o	Honours bachelor degree/professional qualification or both
+                     country == "IE" & Q19.4 == 8 ~ 1, # o	Master degree 
+                     country == "IE" & Q19.4 == 10 ~ 1, # o	Doctorate (Ph.D.) 
+                     country == "IE" & Q19.4 == 9 ~ NA, # o	Other:  
+                     
+                     country == "SE" & Q19.4 == 6 ~ 1, # o	Eftergymnasial utbildning (3 år eller mer) 
+                     country == "SE" & Q19.4 == 7 ~ 1, # o	Forskarutbildning  
+                     country == "SE" & Q19.4 == 12 ~ NA, # o	Annan:  
+                     
+                     TRUE ~ 0
+                    )
+         )
 
 # Outcome variables and perceived independence
 df.total <- df.total %>% 
