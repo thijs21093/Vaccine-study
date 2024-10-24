@@ -9,7 +9,6 @@ setwd("~/ema_study_check/code/Vaccine-study")
 #IE
 raw.IE <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+EN_02_July+24,+2024_08.55.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE) %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -19,7 +18,6 @@ raw.IE["check"] <- "no"
 # FR
 raw.FR <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covd+vaccine+study+-+FR_July+24,+2024_08.56.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -29,7 +27,6 @@ raw.FR["check"] <- "no"
 #NL
 raw.NL <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_04_July+24,+2024_08.54.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE) %>%
   filter(DistributionChannel != "preview" & !is.na(pid))
 
@@ -40,7 +37,6 @@ raw.NL["check"] <- "no"
 #SE
 raw.SE <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_July+24,+2024_08.57.csv",
                        col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid))
 
@@ -50,7 +46,6 @@ raw.SE["check"] <- "no"
 # NL check
 raw.NL.check <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/COVID+Vaccine+study+-+NL_05_July+24,+2024_08.54.csv",
                              col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
@@ -60,12 +55,14 @@ raw.NL.check["check"] <- "yes"
 #SE check
 raw.SE.check <- read_survey("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/Covid+Vaccine+study+-+SV_02_July+24,+2024_08.57.csv",
                              col_types = readr::cols(Q19.7_2_TEXT = readr::col_character())) %>%
-  #arrange(StartDate) %>%
   distinct(pid, .keep_all = TRUE)  %>%
   filter(DistributionChannel != "preview" & !is.na(pid)) 
 
 raw.SE.check["country"] <- "SE"
 raw.SE.check["check"] <- "yes"
+
+# Education "other"
+edu_other <- read_delim("edu_other.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # Binding dataframes
 raw.total <- bind_rows(raw.IE,
@@ -216,6 +213,7 @@ df.total <- df.total %>%
                      TRUE ~ 0
                     )
          )
+
 
 # Outcome variables and perceived independence
 df.total <- df.total %>% 
