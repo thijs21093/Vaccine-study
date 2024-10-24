@@ -62,7 +62,7 @@ raw.SE.check["country"] <- "SE"
 raw.SE.check["check"] <- "yes"
 
 # Education "other"
-edu_other <- read_delim("edu_other.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+edu_other <- read_delim("C:/Users/boertcde/OneDrive - Universiteit Leiden/Documents/ema_study_check/data/edu_other.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # Binding dataframes
 raw.total <- bind_rows(raw.IE,
@@ -115,6 +115,10 @@ raw.mobile <- raw.mobile %>%
 # Bind rows
 df.total <- rbind(raw.mobile, raw.pc)
 
+# Add csv with recoded open answers for education 
+df.total <- df.total %>%
+  full_join(edu_other)
+  
 # Manipulation variable
 df.total <- df.total %>%
   mutate(experimental.group = case_when(
@@ -211,7 +215,8 @@ df.total <- df.total %>%
                      country == "SE" & Q19.4 == 12 ~ NA, # o	Annan:  
                      
                      TRUE ~ 0
-                    )
+                    ),
+         higher.education = coalesce(higher.education, Q19.4_other)
          )
 
 
